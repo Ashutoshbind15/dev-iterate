@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "scripts": {
+    "dev:automation": "pnpm --filter automation-scripts dev:run"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
