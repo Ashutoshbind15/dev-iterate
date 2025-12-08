@@ -1,0 +1,48 @@
+id: rss_summarizer
+namespace: main
+
+variables:
+  actions_base_url: "http://localhost:3211"
+
+tasks:
+  - id: summarize_feed
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+      - id: clone
+        type: io.kestra.plugin.git.Clone
+        url: 'https://github.com/Ashutoshbind15/dev-iterate'
+
+      - id: code
+        type: io.kestra.plugin.scripts.python.Commands
+        dependencies:
+          - kestra
+          - pandas
+          - feedparser
+        env:
+          RSS_URLS: "{{trigger.body.rssuris}}"
+        commands:
+          - python automation-scripts/rssreader.py
+
+      - id: summarizer-agent
+        type: io.kestra.plugin.ai.agent.AIAgent
+        provider:
+          type: io.kestra.plugin.ai.provider.OpenRouter
+          apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+          modelName: google/gemini-2.5-flash
+        prompt: |-
+          Given a list of recent rss feeds, summarize them into 10-15 sentences 
+
+          RSS FEEDS:
+          {{ outputs.code["vars"]["feedxmlstring"] }}
+
+      - id: httpaction
+        type: io.kestra.plugin.core.http.Request
+        uri: "{{vars.actions_base_url}}/feed"
+        method: POST
+        formData:
+          summary: '{{ outputs["summarizer-agent"]["textOutput"] }}'
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"
