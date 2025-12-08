@@ -9,9 +9,13 @@ services:
       - "8080:8080"
     user: root
     volumes:
+      - kestra-data:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp:/tmp
     command: server local
     stdin_open: true
     tty: true
     restart: unless-stopped
+
+volumes:
+  kestra-data:

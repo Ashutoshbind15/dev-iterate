@@ -29,4 +29,9 @@ export default defineSchema({
       )
     ),
   }),
+
+  // RSS feed summaries
+  rssSummaries: defineTable({
+    summaryText: v.string(),
+  }),
 });
