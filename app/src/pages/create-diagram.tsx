@@ -49,20 +49,20 @@ export default function CreateDiagramPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-emerald-50/30">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="min-h-screen bg-white text-zinc-900 font-sans">
+      <div className="max-w-7xl mx-auto p-8">
         {/* Header */}
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-8 flex items-center justify-between border-b border-zinc-200 pb-8">
           <div>
-            <div className="flex items-center gap-3 mb-2">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <PenTool className="h-6 w-6 text-emerald-600" />
+            <div className="flex items-center gap-4 mb-2">
+              <div className="p-2 bg-zinc-900 text-white rounded-sm">
+                <PenTool className="h-5 w-5" />
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
-                Create Diagram
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900">
+                New Diagram
               </h1>
             </div>
-            <p className="text-slate-500 ml-12">
+            <p className="text-zinc-500 ml-14 font-medium">
               Draw diagrams and illustrations for your lessons
             </p>
           </div>
@@ -70,8 +70,8 @@ export default function CreateDiagramPage() {
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg
-                     flex items-center gap-2 transition-colors"
+            className="px-8 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-sm
+                     flex items-center gap-2 transition-transform hover:scale-105"
           >
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save Diagram"}
@@ -79,23 +79,22 @@ export default function CreateDiagramPage() {
         </div>
 
         {/* Title Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Diagram Title
-          </label>
+        <div className="mb-8">
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Component Lifecycle Diagram"
-            className="w-full max-w-md px-4 py-3 rounded-xl border border-slate-200 bg-white 
-                     focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-400
-                     text-slate-800 placeholder:text-slate-400 transition-all"
+            placeholder="Enter a descriptive title..."
+            className="w-full max-w-xl px-0 py-2 rounded-none border-b border-zinc-200 bg-transparent 
+                     focus:outline-none focus:border-zinc-900
+                     text-xl font-bold placeholder:text-zinc-400 transition-colors duration-200 ease-out"
           />
         </div>
 
         {/* Diagram Editor */}
-        <DiagramsEditor ref={editorRef} isEditable={true} />
+        <div className="border border-zinc-200 rounded-sm overflow-hidden grayscale">
+          <DiagramsEditor ref={editorRef} isEditable={true} />
+        </div>
       </div>
     </div>
   );

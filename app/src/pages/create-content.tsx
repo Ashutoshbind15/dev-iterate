@@ -43,58 +43,55 @@ export default function CreateContentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-blue-50/30">
-      <div className="max-w-4xl mx-auto p-6">
+    <div className="min-h-screen bg-white text-zinc-900 font-sans">
+      <div className="max-w-4xl mx-auto p-8">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <FileText className="h-6 w-6 text-blue-600" />
+        <div className="mb-12 flex items-center justify-between border-b border-zinc-200 pb-8">
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <div className="p-2 bg-zinc-900 text-white rounded-sm">
+                <FileText className="h-5 w-5" />
+              </div>
+              <h1 className="text-xl font-bold tracking-tight text-zinc-900">
+                New Content Block
+              </h1>
             </div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-800">
-              Create Content Block
-            </h1>
+            <p className="text-zinc-500 ml-14 font-medium">
+              Write rich text content that can be added to lessons
+            </p>
           </div>
-          <p className="text-slate-500 ml-12">
-            Write rich text content that can be added to lessons
-          </p>
-        </div>
-
-        {/* Title Input */}
-        <div className="mb-6">
-          <label className="block text-sm font-medium text-slate-700 mb-2">
-            Content Title
-          </label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g., Introduction to React Hooks"
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white 
-                     focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400
-                     text-slate-800 placeholder:text-slate-400 transition-all"
-          />
-        </div>
-
-        {/* Editor */}
-        <RichTextEditor
-          ref={editorRef}
-          isEditable={true}
-          minHeight="400px"
-          maxHeight="600px"
-        />
-
-        {/* Save Button */}
-        <div className="mt-6 flex justify-end">
           <Button
             onClick={handleSave}
             disabled={isSaving}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg
-                     flex items-center gap-2 transition-colors"
+            className="px-8 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-sm
+                     flex items-center gap-2 transition-transform hover:scale-105"
           >
             <Save className="h-4 w-4" />
             {isSaving ? "Saving..." : "Save Content"}
           </Button>
+        </div>
+
+        {/* Title Input */}
+        <div className="mb-8">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Enter a descriptive title..."
+            className="w-full px-0 py-2 rounded-none border-b border-zinc-200 bg-transparent 
+                     focus:outline-none focus:border-zinc-900
+                     text-xl font-bold placeholder:text-zinc-400 transition-colors duration-200 ease-out"
+          />
+        </div>
+
+        {/* Editor */}
+        <div className="border border-zinc-200 rounded-sm overflow-hidden">
+          <RichTextEditor
+            ref={editorRef}
+            isEditable={true}
+            minHeight="400px"
+            maxHeight="600px"
+          />
         </div>
       </div>
     </div>

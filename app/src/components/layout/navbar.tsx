@@ -17,25 +17,27 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="h-16 border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto h-full px-4 flex items-center justify-between">
+    <nav className="h-16 border-b border-zinc-200 bg-white sticky top-0 z-50">
+      <div className="max-w-7xl mx-auto h-full px-6 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 group">
-          <div className="p-1.5 rounded-lg bg-linear-to-br from-indigo-500 to-purple-600 group-hover:shadow-lg transition-shadow">
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="p-2 bg-zinc-900 rounded-sm group-hover:scale-105 transition-transform duration-300">
             <BookOpen className="h-5 w-5 text-white" />
           </div>
-          <span className="font-bold text-lg text-slate-800">LessonForge</span>
+          <span className="font-bold text-xl tracking-tight text-zinc-900">
+            LessonForge
+          </span>
         </Link>
 
         {/* Navigation Links */}
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Link
             to="/lessons"
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
               ${
                 isActive("/lessons")
-                  ? "bg-indigo-50 text-indigo-700"
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
               }`}
           >
             <Layers className="h-4 w-4" />
@@ -45,11 +47,11 @@ const Navbar = () => {
           {/* Create Dropdown */}
           <div className="relative group">
             <button
-              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
                 ${
                   isActive("/create") || isActive("/manage")
-                    ? "bg-indigo-50 text-indigo-700"
-                    : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    ? "bg-zinc-900 text-white"
+                    : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
                 }`}
             >
               <Plus className="h-4 w-4" />
@@ -57,52 +59,56 @@ const Navbar = () => {
             </button>
 
             {/* Dropdown */}
-            <div className="absolute right-0 top-full mt-1 w-56 py-2 bg-white rounded-xl shadow-lg border border-slate-200 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all">
+            <div className="absolute right-0 top-full mt-2 w-64 p-2 bg-white border border-zinc-200 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
               <Link
                 to="/create/content"
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
               >
-                <FileText className="h-4 w-4 text-blue-500" />
+                <FileText className="h-5 w-5 mt-0.5" />
                 <div>
-                  <div className="font-medium">Content Block</div>
-                  <div className="text-xs text-slate-400">
-                    Rich text content
+                  <div className="font-semibold text-zinc-900">
+                    Content Block
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
+                    Rich text content editor
                   </div>
                 </div>
               </Link>
               <Link
                 to="/create/diagram"
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
               >
-                <PenTool className="h-4 w-4 text-emerald-500" />
+                <PenTool className="h-5 w-5 mt-0.5" />
                 <div>
-                  <div className="font-medium">Diagram</div>
-                  <div className="text-xs text-slate-400">
-                    Excalidraw drawing
+                  <div className="font-semibold text-zinc-900">Diagram</div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
+                    Visual diagram editor
                   </div>
                 </div>
               </Link>
-              <div className="border-t border-slate-100 my-2" />
+              <div className="border-t border-zinc-100 my-1" />
               <Link
                 to="/create/lesson"
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
               >
-                <BookOpen className="h-4 w-4 text-violet-500" />
+                <BookOpen className="h-5 w-5 mt-0.5" />
                 <div>
-                  <div className="font-medium">New Lesson</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="font-semibold text-zinc-900">New Lesson</div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
                     Combine content & diagrams
                   </div>
                 </div>
               </Link>
               <Link
                 to="/manage/lessons"
-                className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
               >
-                <Settings className="h-4 w-4 text-slate-500" />
+                <Settings className="h-5 w-5 mt-0.5" />
                 <div>
-                  <div className="font-medium">Manage Lessons</div>
-                  <div className="text-xs text-slate-400">
+                  <div className="font-semibold text-zinc-900">
+                    Manage Lessons
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
                     Edit or delete lessons
                   </div>
                 </div>

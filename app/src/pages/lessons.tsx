@@ -28,7 +28,7 @@ function ContentViewer({ content }: { content: string }) {
     editable: false,
     editorProps: {
       attributes: {
-        class: "prose prose-base max-w-none",
+        class: "prose prose-zinc max-w-none",
       },
     },
   });
@@ -48,7 +48,7 @@ function DiagramViewer({
   const parsedAppState = JSON.parse(appState);
 
   return (
-    <div className="h-[500px] rounded-lg overflow-hidden border border-slate-200">
+    <div className="h-[500px] rounded-sm overflow-hidden border border-zinc-200 grayscale">
       <Excalidraw
         initialData={{
           elements: parsedElements,
@@ -75,29 +75,36 @@ export default function LessonsPage() {
   const resolvedItems = selectedLesson?.resolvedItems ?? [];
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-indigo-50/30">
+    <div className="min-h-screen bg-white text-zinc-900 font-sans">
       <div className="flex h-[calc(100vh-64px)]">
         {/* Sidebar - Lessons List (View Only) */}
-        <div className="w-72 border-r border-slate-200 bg-white flex flex-col">
-          <div className="p-4 border-b border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center gap-2">
-                <Layers className="h-5 w-5 text-indigo-600" />
-                <h2 className="font-semibold text-slate-800">Lessons</h2>
+        <div className="w-80 border-r border-zinc-200 bg-white flex flex-col">
+          <div className="p-6 border-b border-zinc-100">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-zinc-900 text-white rounded-sm">
+                  <Layers className="h-5 w-5" />
+                </div>
+                <h2 className="font-bold tracking-tight text-zinc-900">
+                  Lessons
+                </h2>
               </div>
             </div>
+            <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider ml-12">
+              Library
+            </p>
           </div>
 
-          <div className="flex-1 overflow-y-auto p-3">
+          <div className="flex-1 overflow-y-auto p-4">
             {isLoadingLessons && (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+                <Loader2 className="h-6 w-6 animate-spin text-zinc-900" />
               </div>
             )}
 
             {!isLoadingLessons && lessons.length === 0 && (
-              <div className="text-center py-12 text-slate-500">
-                <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-30" />
+              <div className="text-center py-12 text-zinc-500">
+                <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
                 <p className="text-sm font-medium">No lessons yet</p>
               </div>
             )}
@@ -108,27 +115,20 @@ export default function LessonsPage() {
                   <button
                     key={lesson._id}
                     onClick={() => setSelectedLessonId(lesson._id)}
-                    className={`w-full text-left p-3 rounded-lg transition-all group
+                    className={`w-full text-left p-4 rounded-sm transition-all group border-l-2
                       ${
                         selectedLessonId === lesson._id
-                          ? "bg-indigo-50 border-indigo-200 border"
-                          : "hover:bg-slate-50 border border-transparent"
+                          ? "bg-zinc-50 border-zinc-900"
+                          : "hover:bg-zinc-50 border-transparent hover:border-zinc-200"
                       }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <BookOpen
-                          className={`h-4 w-4 shrink-0 ${
-                            selectedLessonId === lesson._id
-                              ? "text-indigo-600"
-                              : "text-slate-400"
-                          }`}
-                        />
+                      <div className="flex items-center gap-3 min-w-0">
                         <span
-                          className={`font-medium truncate ${
+                          className={`font-semibold truncate ${
                             selectedLessonId === lesson._id
-                              ? "text-indigo-700"
-                              : "text-slate-700"
+                              ? "text-zinc-900"
+                              : "text-zinc-600 group-hover:text-zinc-900"
                           }`}
                         >
                           {lesson.title}
@@ -137,18 +137,18 @@ export default function LessonsPage() {
                       <ChevronRight
                         className={`h-4 w-4 shrink-0 transition-transform ${
                           selectedLessonId === lesson._id
-                            ? "text-indigo-600 rotate-90"
-                            : "text-slate-300 group-hover:text-slate-400"
+                            ? "text-zinc-900"
+                            : "text-zinc-300 group-hover:text-zinc-500"
                         }`}
                       />
                     </div>
                     {lesson.description && (
-                      <p className="text-xs text-slate-500 mt-1 ml-6 truncate">
+                      <p className="text-xs text-zinc-500 mt-1 truncate pl-1">
                         {lesson.description}
                       </p>
                     )}
-                    <div className="flex items-center gap-2 mt-2 ml-6">
-                      <span className="text-xs text-slate-400">
+                    <div className="flex items-center gap-2 mt-3 pl-1">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
                         {lesson.items.length} items
                       </span>
                     </div>
@@ -160,41 +160,41 @@ export default function LessonsPage() {
         </div>
 
         {/* Main Content Area (View Only) */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto bg-zinc-50/30">
           {isLoadingSelectedLesson ? (
             <div className="h-full flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+              <Loader2 className="h-8 w-8 animate-spin text-zinc-900" />
             </div>
           ) : !selectedLesson ? (
             <div className="h-full flex items-center justify-center">
-              <div className="text-center text-slate-500">
-                <BookOpen className="h-16 w-16 mx-auto mb-4 opacity-20" />
-                <p className="text-lg font-medium text-slate-400">
-                  Select a lesson to view
+              <div className="text-center text-zinc-400">
+                <BookOpen className="h-20 w-20 mx-auto mb-6 opacity-10" />
+                <p className="text-xl font-bold text-zinc-900 mb-2">
+                  Select a lesson
                 </p>
-                <p className="text-sm">Choose from the sidebar</p>
+                <p className="text-sm text-zinc-500">
+                  Choose from the sidebar to view content
+                </p>
               </div>
             </div>
           ) : (
-            <div className="max-w-4xl mx-auto py-8 px-6">
+            <div className="max-w-4xl mx-auto py-12 px-8">
               {/* Lesson Header */}
-              <div className="mb-8">
-                <h1 className="text-3xl font-bold text-slate-800 mb-2">
+              <div className="mb-12 border-b border-zinc-200 pb-8">
+                <h1 className="text-4xl font-black tracking-tight text-zinc-900 mb-4">
                   {selectedLesson.title}
                 </h1>
                 {selectedLesson.description && (
-                  <p className="text-lg text-slate-500">
+                  <p className="text-xl text-zinc-500 font-light leading-relaxed">
                     {selectedLesson.description}
                   </p>
                 )}
-                <div className="flex items-center gap-4 mt-4 text-sm text-slate-400">
+                <div className="flex items-center gap-6 mt-8 text-xs font-bold uppercase tracking-widest text-zinc-400">
                   <span>{resolvedItems.length} sections</span>
-                  <span>•</span>
                   <span>
                     {resolvedItems.filter((i) => i.type === "content").length}{" "}
                     content blocks
                   </span>
-                  <span>•</span>
                   <span>
                     {resolvedItems.filter((i) => i.type === "diagram").length}{" "}
                     diagrams
@@ -203,7 +203,7 @@ export default function LessonsPage() {
               </div>
 
               {/* Lesson Content */}
-              <div className="space-y-8">
+              <div className="space-y-12">
                 {resolvedItems.map((item, index) => {
                   if (!item.data) return null;
 
@@ -215,35 +215,26 @@ export default function LessonsPage() {
                       className="scroll-mt-6"
                     >
                       {/* Section Header */}
-                      <div className="flex items-center gap-3 mb-4">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-600 text-sm font-medium">
+                      <div className="flex items-center gap-4 mb-6">
+                        <span className="flex items-center justify-center w-8 h-8 rounded-sm bg-zinc-900 text-white text-sm font-bold">
                           {index + 1}
                         </span>
-                        <div
-                          className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium
-                            ${
-                              isContent
-                                ? "bg-blue-50 text-blue-700"
-                                : "bg-emerald-50 text-emerald-700"
-                            }`}
-                        >
-                          {isContent ? (
-                            <FileText className="h-3.5 w-3.5" />
-                          ) : (
-                            <PenTool className="h-3.5 w-3.5" />
-                          )}
-                          {item.data.title}
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 border border-zinc-200 px-2 py-1 rounded-sm">
+                            {isContent ? "Content" : "Diagram"}
+                          </span>
+                          <h3 className="text-lg font-bold text-zinc-900">
+                            {item.data.title}
+                          </h3>
                         </div>
                       </div>
 
                       {/* Section Content */}
                       <div
-                        className={`rounded-xl border bg-white shadow-sm overflow-hidden
-                          ${
-                            isContent ? "border-blue-100" : "border-emerald-100"
-                          }`}
+                        className={`rounded-sm border border-zinc-200 bg-white shadow-sm overflow-hidden
+                          ${!isContent ? "p-0" : ""}`}
                       >
-                        <div className="p-6">
+                        <div className={isContent ? "p-8" : "p-0"}>
                           {isContent ? (
                             <ContentViewer
                               content={
@@ -269,9 +260,9 @@ export default function LessonsPage() {
 
               {/* Empty State */}
               {resolvedItems.length === 0 && (
-                <div className="text-center py-16 text-slate-500">
-                  <Layers className="h-12 w-12 mx-auto mb-4 opacity-30" />
-                  <p className="text-lg font-medium text-slate-400">
+                <div className="text-center py-24 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
+                  <Layers className="h-12 w-12 mx-auto mb-4 opacity-20" />
+                  <p className="text-lg font-medium text-zinc-500">
                     This lesson has no content yet
                   </p>
                 </div>
