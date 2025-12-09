@@ -13,6 +13,7 @@ import ProfilePage from "@/pages/profile";
 import CorpusPage from "@/pages/corpus";
 import ContributeQuestionPage from "@/pages/contribute-question";
 import QuestionViewPage from "@/pages/question-view";
+import LeaderboardPage from "@/pages/leaderboard";
 
 const RouteComp = () => {
   return (
@@ -31,6 +32,7 @@ const RouteComp = () => {
         {/* Quiz routes */}
         <Route path="/corpus" element={<CorpusPage />} />
         <Route path="/corpus/:id" element={<QuestionViewPage />} />
+        <Route path="/leaderboard" element={<LeaderboardPage />} />
 
         <Route element={<AuthedWrapper />}>
           <Route path="/profile" element={<ProfilePage />} />

@@ -10,7 +10,11 @@ export const createQuestion = mutation({
     questionText: v.string(),
     options: v.optional(v.array(v.string())),
     correctAnswer: v.union(v.string(), v.number()),
-    difficulty: v.union(v.literal("easy"), v.literal("medium"), v.literal("hard")),
+    difficulty: v.union(
+      v.literal("easy"),
+      v.literal("medium"),
+      v.literal("hard")
+    ),
     tags: v.array(v.string()),
   },
   returns: v.id("questions"),
@@ -82,7 +86,9 @@ export const submitAnswer = mutation({
       .first();
 
     if (existingAnswer) {
-      throw new ConvexError("You have already submitted an answer to this question");
+      throw new ConvexError(
+        "You have already submitted an answer to this question"
+      );
     }
 
     // Get question
@@ -112,6 +118,49 @@ export const submitAnswer = mutation({
       isCorrect,
       submittedAt: Date.now(),
     });
+
+    // Update user stats for leaderboard
+    const existingStats = await ctx.db
+      .query("userStats")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    // Calculate sortScore: score * 1e6 + totalAnswers
+    // This allows efficient DB-level sorting by a single indexed field
+    const SORT_SCORE_MULTIPLIER = 1e6;
+
+    if (existingStats) {
+      // Update existing stats
+      const newCorrectCount = existingStats.correctCount + (isCorrect ? 1 : 0);
+      const newIncorrectCount =
+        existingStats.incorrectCount + (isCorrect ? 0 : 1);
+      const newScore = newCorrectCount * 2 - newIncorrectCount * 1;
+      const newTotalAnswers = existingStats.totalAnswers + 1;
+      const newSortScore = newScore * SORT_SCORE_MULTIPLIER + newTotalAnswers;
+
+      await ctx.db.patch(existingStats._id, {
+        score: newScore,
+        correctCount: newCorrectCount,
+        incorrectCount: newIncorrectCount,
+        totalAnswers: newTotalAnswers,
+        sortScore: newSortScore,
+      });
+    } else {
+      // Create new stats entry
+      const initialScore = isCorrect ? 2 : -1;
+      const initialTotalAnswers = 1;
+      const initialSortScore =
+        initialScore * SORT_SCORE_MULTIPLIER + initialTotalAnswers;
+
+      await ctx.db.insert("userStats", {
+        userId,
+        score: initialScore,
+        correctCount: isCorrect ? 1 : 0,
+        incorrectCount: isCorrect ? 0 : 1,
+        totalAnswers: initialTotalAnswers,
+        sortScore: initialSortScore,
+      });
+    }
 
     return { isCorrect, answerId };
   },
@@ -148,8 +197,14 @@ export const voteQuestion = mutation({
         await ctx.db.delete(existingVote._id);
         // Decrement vote count
         await ctx.db.patch(args.questionId, {
-          upvotes: args.voteType === "upvote" ? question.upvotes - 1 : question.upvotes,
-          downvotes: args.voteType === "downvote" ? question.downvotes - 1 : question.downvotes,
+          upvotes:
+            args.voteType === "upvote"
+              ? question.upvotes - 1
+              : question.upvotes,
+          downvotes:
+            args.voteType === "downvote"
+              ? question.downvotes - 1
+              : question.downvotes,
         });
       } else {
         // Change vote type
@@ -157,9 +212,13 @@ export const voteQuestion = mutation({
         // Update vote counts
         await ctx.db.patch(args.questionId, {
           upvotes:
-            args.voteType === "upvote" ? question.upvotes + 1 : question.upvotes - 1,
+            args.voteType === "upvote"
+              ? question.upvotes + 1
+              : question.upvotes - 1,
           downvotes:
-            args.voteType === "downvote" ? question.downvotes + 1 : question.downvotes - 1,
+            args.voteType === "downvote"
+              ? question.downvotes + 1
+              : question.downvotes - 1,
         });
       }
     } else {
@@ -171,8 +230,12 @@ export const voteQuestion = mutation({
       });
       // Increment vote count
       await ctx.db.patch(args.questionId, {
-        upvotes: args.voteType === "upvote" ? question.upvotes + 1 : question.upvotes,
-        downvotes: args.voteType === "downvote" ? question.downvotes + 1 : question.downvotes,
+        upvotes:
+          args.voteType === "upvote" ? question.upvotes + 1 : question.upvotes,
+        downvotes:
+          args.voteType === "downvote"
+            ? question.downvotes + 1
+            : question.downvotes,
       });
     }
 
@@ -218,4 +281,3 @@ export const starQuestion = mutation({
     return null;
   },
 });
-

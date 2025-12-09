@@ -9,6 +9,7 @@ import {
   User,
   HelpCircle,
   MessageSquare,
+  Trophy,
 } from "lucide-react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { SignIn } from "../utils/sign-in";
@@ -60,6 +61,18 @@ const Navbar = () => {
           >
             <HelpCircle className="h-4 w-4" />
             Corpus
+          </Link>
+          <Link
+            to="/leaderboard"
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
+              ${
+                isActive("/leaderboard")
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
+              }`}
+          >
+            <Trophy className="h-4 w-4" />
+            Leaderboard
           </Link>
 
           {/* Create Dropdown */}

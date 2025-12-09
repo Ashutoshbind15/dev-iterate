@@ -89,5 +89,17 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_question_and_user", ["questionId", "userId"]),
 
+  // User leaderboard stats (pre-computed for efficient queries)
+  userStats: defineTable({
+    userId: v.id("users"),
+    score: v.number(), // Leaderboard score: +2 per correct, -1 per incorrect
+    correctCount: v.number(),
+    incorrectCount: v.number(),
+    totalAnswers: v.number(),
+    sortScore: v.number(), // Composite sort key: score * 1e6 + totalAnswers (for efficient DB sorting)
+  })
+    .index("by_user", ["userId"])
+    .index("by_sortScore", ["sortScore"]),
+
   ...authTables,
 });
