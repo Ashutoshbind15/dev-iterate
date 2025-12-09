@@ -1,0 +1,62 @@
+id: user_weakness_analyzer
+namespace: main
+
+tasks:
+  - id: format_payload
+    type: io.kestra.plugin.scripts.python.Commands
+    commands:
+      - |
+        import json
+
+        trigger_body = json.loads('''{{ trigger.body | json }}''')
+        questions = trigger_body.get('questions', [])
+        question_ids = [q['questionId'] for q in questions]
+
+        # Store in vars for use in next task
+        vars.question_ids_json = json.dumps(question_ids)
+
+  - id: analyze_weakness
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: google/gemini-2.5-flash
+    prompt: |-
+      You are a learning coach analyzing a student's performance on 5 coding questions.
+
+      Given the following information, provide a ONE-LINE remark (max 100 characters) that summarizes their learning progress and areas to focus on.
+
+      PAST REMARKS (for context):
+      {{ trigger.body.pastRemarks }}
+
+      RECENT 5 QUESTIONS AND ANSWERS:
+      {{ trigger.body.questions | json }}
+
+      For each question, you can see:
+      - questionText: The question asked
+      - tags: Topics covered
+      - difficulty: easy/medium/hard
+      - correctAnswer: The correct answer
+      - userAnswer: What the student answered
+      - isCorrect: Whether they got it right
+
+      Provide a concise, actionable one-line remark that helps the student understand their progress and what to focus on next.
+      Return ONLY the remark text, no quotes, no explanations, just the remark.
+
+  - id: save_remark
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/user-weakness"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "userId": "{{ trigger.body.userId }}",
+        "remark": "{{ outputs.analyze_weakness.textOutput | trim }}",
+        "questionIds": {{ outputs.format_payload.vars.question_ids_json }}
+      }
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEAKNESS_WEBHOOK_KEY') }}"

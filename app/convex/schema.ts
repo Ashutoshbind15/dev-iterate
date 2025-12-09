@@ -101,5 +101,14 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_sortScore", ["sortScore"]),
 
+  // User remarks from weakness analysis (one per batch of 5 questions)
+  userRemarks: defineTable({
+    userId: v.id("users"),
+    remark: v.string(), // One-line remark from Kestra AI analysis
+    questionIds: v.array(v.id("questions")), // The 5 questions that triggered this analysis
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"]),
+
   ...authTables,
 });

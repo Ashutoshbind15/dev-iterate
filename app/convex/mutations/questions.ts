@@ -2,6 +2,7 @@ import { mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
+import { internal } from "../_generated/api";
 
 export const createQuestion = mutation({
   args: {
@@ -160,6 +161,63 @@ export const submitAnswer = mutation({
         totalAnswers: initialTotalAnswers,
         sortScore: initialSortScore,
       });
+    }
+
+    // Check if we should trigger weakness analysis (every 5 answers)
+    const recentAnswers = await ctx.db
+      .query("answers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .order("desc")
+      .take(5);
+
+    // If we have exactly 5 answers (or this is the 5th), trigger analysis
+    if (recentAnswers.length === 5) {
+      // Get the 5 questions with full details
+      const questionsData = await Promise.all(
+        recentAnswers.map(async (answer) => {
+          const question = await ctx.db.get(answer.questionId);
+          if (!question) return null;
+          return {
+            questionId: answer.questionId.toString(),
+            questionText: question.questionText,
+            title: question.title,
+            tags: question.tags,
+            difficulty: question.difficulty,
+            correctAnswer:
+              question.type === "mcq"
+                ? question.options?.[question.correctAnswer as number] || ""
+                : String(question.correctAnswer),
+            userAnswer: answer.answer,
+            isCorrect: answer.isCorrect,
+          };
+        })
+      );
+
+      const validQuestions = questionsData.filter(
+        (q): q is NonNullable<typeof q> => q !== null
+      );
+
+      if (validQuestions.length === 5) {
+        // Get past remarks for context
+        const pastRemarks = await ctx.db
+          .query("userRemarks")
+          .withIndex("by_user", (q) => q.eq("userId", userId))
+          .order("desc")
+          .take(10); // Get last 10 remarks
+
+        const remarksText = pastRemarks.map((r) => r.remark).join(" | ");
+
+        // Trigger Kestra flow (fire-and-forget)
+        await ctx.scheduler.runAfter(
+          0,
+          internal.actionsdir.weakness.triggerWeaknessAnalysis,
+          {
+            userId,
+            questions: validQuestions,
+            pastRemarks: remarksText || "",
+          }
+        );
+      }
     }
 
     return { isCorrect, answerId };
