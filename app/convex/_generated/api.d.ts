@@ -9,6 +9,7 @@
  */
 
 import type * as actionsdir_rss from "../actionsdir/rss.js";
+import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as httpactions_feed from "../httpactions/feed.js";
 import type * as mutations_contents from "../mutations/contents.js";
@@ -18,6 +19,7 @@ import type * as mutations_rssSummaries from "../mutations/rssSummaries.js";
 import type * as queries_contents from "../queries/contents.js";
 import type * as queries_diagrams from "../queries/diagrams.js";
 import type * as queries_lessons from "../queries/lessons.js";
+import type * as queries_user from "../queries/user.js";
 
 import type {
   ApiFromModules,
@@ -27,6 +29,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   "actionsdir/rss": typeof actionsdir_rss;
+  auth: typeof auth;
   http: typeof http;
   "httpactions/feed": typeof httpactions_feed;
   "mutations/contents": typeof mutations_contents;
@@ -36,6 +39,7 @@ declare const fullApi: ApiFromModules<{
   "queries/contents": typeof queries_contents;
   "queries/diagrams": typeof queries_diagrams;
   "queries/lessons": typeof queries_lessons;
+  "queries/user": typeof queries_user;
 }>;
 
 /**

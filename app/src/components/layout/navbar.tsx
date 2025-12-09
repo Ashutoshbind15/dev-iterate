@@ -6,7 +6,11 @@ import {
   PenTool,
   Layers,
   Settings,
+  User,
 } from "lucide-react";
+import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import { SignIn } from "../utils/sign-in";
+import { SignOut } from "../utils/sign-out";
 
 const Navbar = () => {
   const location = useLocation();
@@ -116,6 +120,27 @@ const Navbar = () => {
             </div>
           </div>
         </div>
+        <AuthLoading>Loading...</AuthLoading>
+        <Unauthenticated>
+          <SignIn />
+        </Unauthenticated>
+        <Authenticated>
+          <div className="flex items-center gap-2">
+            <Link
+              to="/profile"
+              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
+                ${
+                  isActive("/profile")
+                    ? "bg-zinc-900 text-white"
+                    : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
+                }`}
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Link>
+            <SignOut />
+          </div>
+        </Authenticated>
       </div>
     </nav>
   );

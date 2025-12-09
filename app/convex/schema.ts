@@ -1,5 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
+import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
   // Rich text content blocks
@@ -34,4 +35,6 @@ export default defineSchema({
   rssSummaries: defineTable({
     summaryText: v.string(),
   }),
+
+  ...authTables,
 });

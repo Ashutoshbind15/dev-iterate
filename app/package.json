@@ -10,7 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@auth/core": "0.37.0",
     "@catppuccin/highlightjs": "^1.0.1",
+    "@convex-dev/auth": "^0.0.90",
     "@excalidraw/excalidraw": "^0.18.0",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",

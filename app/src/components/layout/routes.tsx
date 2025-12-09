@@ -8,6 +8,8 @@ import CreateDiagramPage from "@/pages/create-diagram";
 import CreateLessonPage from "@/pages/create-lesson";
 import ManageLessonsPage from "@/pages/manage-lessons";
 import LessonsPage from "@/pages/lessons";
+import AuthedWrapper from "./authed";
+import ProfilePage from "@/pages/profile";
 
 const RouteComp = () => {
   return (
@@ -23,6 +25,10 @@ const RouteComp = () => {
         <Route path="/manage/lessons" element={<ManageLessonsPage />} />
         {/* Viewer routes */}
         <Route path="/lessons" element={<LessonsPage />} />
+
+        <Route element={<AuthedWrapper />}>
+          <Route path="/profile" element={<ProfilePage />} />
+        </Route>
       </Route>
     </Routes>
   );
