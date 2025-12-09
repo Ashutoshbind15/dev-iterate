@@ -2,6 +2,17 @@ import { useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
 import { Plus, ArrowLeft } from "lucide-react";
@@ -13,7 +24,9 @@ export default function ContributeQuestionPage() {
   const [questionText, setQuestionText] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [correctAnswer, setCorrectAnswer] = useState<string>("");
-  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">("medium");
+  const [difficulty, setDifficulty] = useState<"easy" | "medium" | "hard">(
+    "medium"
+  );
   const [tags, setTags] = useState<string>("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const createQuestion = useMutation(api.mutations.questions.createQuestion);
@@ -149,35 +162,37 @@ export default function ContributeQuestionPage() {
             Question Type
           </label>
           <div className="flex gap-4">
-            <button
+            <Button
               type="button"
               onClick={() => {
                 setType("mcq");
                 setCorrectAnswer("");
               }}
-              className={`px-4 py-2 rounded-md border transition-colors ${
+              variant={type === "mcq" ? "default" : "outline"}
+              className={
                 type === "mcq"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+                  ? "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800"
+                  : ""
+              }
             >
               Multiple Choice (MCQ)
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => {
                 setType("descriptive");
                 setOptions(["", ""]);
                 setCorrectAnswer("");
               }}
-              className={`px-4 py-2 rounded-md border transition-colors ${
+              variant={type === "descriptive" ? "default" : "outline"}
+              className={
                 type === "descriptive"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+                  ? "bg-zinc-900 text-white border-zinc-900 hover:bg-zinc-800"
+                  : ""
+              }
             >
               Descriptive Answer
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -186,12 +201,12 @@ export default function ContributeQuestionPage() {
           <label className="block text-sm font-medium text-zinc-700 mb-2">
             Title
           </label>
-          <input
+          <Input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Enter a descriptive title for the question..."
-            className="w-full px-4 py-2 rounded-md border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+            className="w-full"
           />
         </div>
 
@@ -200,12 +215,12 @@ export default function ContributeQuestionPage() {
           <label className="block text-sm font-medium text-zinc-700 mb-2">
             Question Text
           </label>
-          <textarea
+          <Textarea
             value={questionText}
             onChange={(e) => setQuestionText(e.target.value)}
             placeholder="Enter the question..."
             rows={4}
-            className="w-full px-4 py-2 rounded-md border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent resize-y"
+            className="w-full resize-y"
           />
         </div>
 
@@ -228,39 +243,46 @@ export default function ContributeQuestionPage() {
             </div>
             {options.map((option, index) => (
               <div key={index} className="flex gap-2 mb-2">
-                <input
+                <Input
                   type="text"
                   value={option}
                   onChange={(e) => handleOptionChange(index, e.target.value)}
                   placeholder={`Option ${index + 1}`}
-                  className="flex-1 px-4 py-2 rounded-md border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+                  className="flex-1"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="outline"
                   onClick={() => handleRemoveOption(index)}
-                  className="px-3 py-2 text-red-600 hover:bg-red-50 rounded-md border border-red-200"
                   disabled={options.length <= 2}
+                  className="text-red-600 hover:bg-red-50 border-red-200 hover:border-red-300"
                 >
                   Remove
-                </button>
+                </Button>
               </div>
             ))}
             <div className="mt-4">
               <label className="block text-sm font-medium text-zinc-700 mb-2">
                 Correct Answer
               </label>
-              <select
-                value={correctAnswer}
-                onChange={(e) => setCorrectAnswer(e.target.value)}
-                className="w-full px-4 py-2 rounded-md border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+              <Select
+                value={correctAnswer || undefined}
+                onValueChange={(value) => setCorrectAnswer(value)}
               >
-                <option value="">Select correct answer</option>
-                {options.map((_, index) => (
-                  <option key={index} value={index}>
-                    Option {index + 1}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select correct answer" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Options</SelectLabel>
+                    {options.map((_, index) => (
+                      <SelectItem key={index} value={String(index)}>
+                        Option {index + 1}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         )}
@@ -271,12 +293,12 @@ export default function ContributeQuestionPage() {
             <label className="block text-sm font-medium text-zinc-700 mb-2">
               Correct Answer
             </label>
-            <input
+            <Input
               type="text"
               value={correctAnswer}
               onChange={(e) => setCorrectAnswer(e.target.value)}
               placeholder="Enter the correct answer..."
-              className="w-full px-4 py-2 rounded-md border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+              className="w-full"
             />
             <p className="text-xs text-zinc-500 mt-1">
               Answers will be matched case-insensitively
@@ -290,39 +312,42 @@ export default function ContributeQuestionPage() {
             Difficulty
           </label>
           <div className="flex gap-4">
-            <button
+            <Button
               type="button"
               onClick={() => setDifficulty("easy")}
-              className={`px-4 py-2 rounded-md border transition-colors ${
+              variant={difficulty === "easy" ? "default" : "outline"}
+              className={
                 difficulty === "easy"
-                  ? "bg-green-600 text-white border-green-600"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+                  ? "bg-green-600 text-white border-green-600 hover:bg-green-700"
+                  : ""
+              }
             >
               Easy
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setDifficulty("medium")}
-              className={`px-4 py-2 rounded-md border transition-colors ${
+              variant={difficulty === "medium" ? "default" : "outline"}
+              className={
                 difficulty === "medium"
-                  ? "bg-yellow-600 text-white border-yellow-600"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+                  ? "bg-yellow-600 text-white border-yellow-600 hover:bg-yellow-700"
+                  : ""
+              }
             >
               Medium
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setDifficulty("hard")}
-              className={`px-4 py-2 rounded-md border transition-colors ${
+              variant={difficulty === "hard" ? "default" : "outline"}
+              className={
                 difficulty === "hard"
-                  ? "bg-red-600 text-white border-red-600"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+                  ? "bg-red-600 text-white border-red-600 hover:bg-red-700"
+                  : ""
+              }
             >
               Hard
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -331,12 +356,12 @@ export default function ContributeQuestionPage() {
           <label className="block text-sm font-medium text-zinc-700 mb-2">
             Tags
           </label>
-          <input
+          <Input
             type="text"
             value={tags}
             onChange={(e) => setTags(e.target.value)}
             placeholder="Enter tags separated by commas (e.g., math, algebra, equations)"
-            className="w-full px-4 py-2 rounded-md border border-zinc-300 focus:outline-none focus:ring-2 focus:ring-zinc-900 focus:border-transparent"
+            className="w-full"
           />
           <p className="text-xs text-zinc-500 mt-1">
             Separate multiple tags with commas
@@ -364,4 +389,3 @@ export default function ContributeQuestionPage() {
     </div>
   );
 }
-

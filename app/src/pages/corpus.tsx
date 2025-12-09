@@ -2,6 +2,15 @@ import { useState } from "react";
 import { usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Link } from "react-router";
 import { Plus, CheckCircle, XCircle, ChevronRight } from "lucide-react";
 
@@ -66,166 +75,178 @@ export default function CorpusPage() {
 
         {/* Filters */}
         <div className="mb-6 space-y-4">
-          <div className="flex gap-2 flex-wrap">
-            <span className="text-sm font-medium text-zinc-700 py-2">
-              Sort:
-            </span>
-            <button
-              onClick={() => setSortBy("newest")}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                sortBy === "newest"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-zinc-700">Sort:</span>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={2}
+              size="sm"
+              value={sortBy}
+              onValueChange={(value) => {
+                if (value) {
+                  setSortBy(value as "newest" | "upvotes" | "popular");
+                }
+              }}
             >
-              Newest
-            </button>
-            <button
-              onClick={() => setSortBy("upvotes")}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                sortBy === "upvotes"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
-            >
-              Most Upvoted
-            </button>
-            <button
-              onClick={() => setSortBy("popular")}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                sortBy === "popular"
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
-            >
-              Popular
-            </button>
+              <ToggleGroupItem
+                value="newest"
+                aria-label="Sort by newest"
+                className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+              >
+                Newest
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="upvotes"
+                aria-label="Sort by upvotes"
+                className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+              >
+                Most Upvoted
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="popular"
+                aria-label="Sort by popular"
+                className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+              >
+                Popular
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
-            <span className="text-sm font-medium text-zinc-700 py-2">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-zinc-700">
               Difficulty:
             </span>
-            <button
-              onClick={() => setDifficulty(undefined)}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                difficulty === undefined
-                  ? "bg-zinc-900 text-white border-zinc-900"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={2}
+              size="sm"
+              value={difficulty || "all"}
+              onValueChange={(value) => {
+                if (value === "all") {
+                  setDifficulty(undefined);
+                } else if (value) {
+                  setDifficulty(value as "easy" | "medium" | "hard");
+                }
+              }}
             >
-              All
-            </button>
-            <button
-              onClick={() => setDifficulty("easy")}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                difficulty === "easy"
-                  ? "bg-green-600 text-white border-green-600"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
-            >
-              Easy
-            </button>
-            <button
-              onClick={() => setDifficulty("medium")}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                difficulty === "medium"
-                  ? "bg-yellow-600 text-white border-yellow-600"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
-            >
-              Medium
-            </button>
-            <button
-              onClick={() => setDifficulty("hard")}
-              className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                difficulty === "hard"
-                  ? "bg-red-600 text-white border-red-600"
-                  : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-              }`}
-            >
-              Hard
-            </button>
+              <ToggleGroupItem
+                value="all"
+                aria-label="All difficulties"
+                className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+              >
+                All
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="easy"
+                aria-label="Easy difficulty"
+                className="data-[state=on]:bg-green-600 data-[state=on]:text-white data-[state=on]:border-green-600"
+              >
+                Easy
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="medium"
+                aria-label="Medium difficulty"
+                className="data-[state=on]:bg-yellow-600 data-[state=on]:text-white data-[state=on]:border-yellow-600"
+              >
+                Medium
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="hard"
+                aria-label="Hard difficulty"
+                className="data-[state=on]:bg-red-600 data-[state=on]:text-white data-[state=on]:border-red-600"
+              >
+                Hard
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
           {allTags && allTags.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
-              <span className="text-sm font-medium text-zinc-700 py-2">
-                Tags:
-              </span>
-              <button
-                onClick={() => setSelectedTag(undefined)}
-                className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                  selectedTag === undefined
-                    ? "bg-zinc-900 text-white border-zinc-900"
-                    : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-                }`}
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-zinc-700">Tags:</span>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                spacing={2}
+                size="sm"
+                value={selectedTag || "all"}
+                onValueChange={(value) => {
+                  if (value === "all") {
+                    setSelectedTag(undefined);
+                  } else if (value) {
+                    setSelectedTag(value);
+                  }
+                }}
               >
-                All
-              </button>
-              {allTags.map((tag) => (
-                <button
-                  key={tag}
-                  onClick={() => setSelectedTag(tag)}
-                  className={`px-4 py-2 rounded-md border transition-colors text-sm ${
-                    selectedTag === tag
-                      ? "bg-zinc-900 text-white border-zinc-900"
-                      : "bg-white text-zinc-700 border-zinc-300 hover:bg-zinc-50"
-                  }`}
+                <ToggleGroupItem
+                  value="all"
+                  aria-label="All tags"
+                  className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
                 >
-                  {tag}
-                </button>
-              ))}
+                  All
+                </ToggleGroupItem>
+                {allTags.map((tag) => (
+                  <ToggleGroupItem
+                    key={tag}
+                    value={tag}
+                    aria-label={`Filter by ${tag}`}
+                    className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+                  >
+                    {tag}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
           )}
         </div>
 
         {/* Table */}
         <div className="border border-zinc-200 rounded-lg overflow-hidden">
-          <table className="w-full">
-            <thead className="bg-zinc-50 border-b border-zinc-200">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+          <Table>
+            <TableHeader className="bg-zinc-50">
+              <TableRow>
+                <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Title
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Type
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Difficulty
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Tags
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                </TableHead>
+                <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Score
-                </th>
+                </TableHead>
                 {currentUser && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                  <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                     Status
-                  </th>
+                  </TableHead>
                 )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-zinc-500 uppercase tracking-wider">
+                <TableHead className="px-6 py-3 text-xs font-medium text-zinc-500 uppercase tracking-wider">
                   Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-zinc-200">
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {results.length === 0 ? (
-                <tr>
-                  <td
+                <TableRow>
+                  <TableCell
                     colSpan={currentUser ? 7 : 6}
                     className="px-6 py-12 text-center text-zinc-500"
                   >
                     No questions found. Be the first to contribute!
-                  </td>
-                </tr>
+                  </TableCell>
+                </TableRow>
               ) : (
                 results.map((question) => {
                   const score = question.upvotes - question.downvotes;
                   return (
-                    <tr key={question._id} className="hover:bg-zinc-50">
-                      <td className="px-6 py-4">
+                    <TableRow key={question._id}>
+                      <TableCell className="px-6 py-4">
                         <Link
                           to={`/corpus/${question._id}`}
                           className="block hover:text-zinc-600 transition-colors"
@@ -237,13 +258,13 @@ export default function CorpusPage() {
                             {question.questionText}
                           </div>
                         </Link>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <span className="px-2 py-1 text-xs font-medium bg-zinc-100 text-zinc-700 rounded capitalize">
                           {question.type}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <span
                           className={`px-2 py-1 text-xs font-medium rounded capitalize ${getDifficultyColor(
                             question.difficulty
@@ -251,8 +272,8 @@ export default function CorpusPage() {
                         >
                           {question.difficulty}
                         </span>
-                      </td>
-                      <td className="px-6 py-4">
+                      </TableCell>
+                      <TableCell className="px-6 py-4">
                         <div className="flex flex-wrap gap-1">
                           {question.tags.slice(0, 3).map((tag: string) => (
                             <span
@@ -268,8 +289,8 @@ export default function CorpusPage() {
                             </span>
                           )}
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      </TableCell>
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <span
                             className={`text-sm font-medium ${
@@ -282,9 +303,9 @@ export default function CorpusPage() {
                             <span>↑ {question.upvotes}</span>
                           </div>
                         </div>
-                      </td>
+                      </TableCell>
                       {currentUser && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <TableCell className="px-6 py-4 whitespace-nowrap">
                           {question.hasAnswered ? (
                             <div className="flex items-center gap-1">
                               {question.isCorrect ? (
@@ -308,22 +329,22 @@ export default function CorpusPage() {
                               Not answered
                             </span>
                           )}
-                        </td>
+                        </TableCell>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <TableCell className="px-6 py-4 whitespace-nowrap">
                         <Link
                           to={`/corpus/${question._id}`}
                           className="text-sm text-zinc-600 hover:text-zinc-900 font-medium"
                         >
                           View →
                         </Link>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   );
                 })
               )}
-            </tbody>
-          </table>
+            </TableBody>
+          </Table>
         </div>
 
         {/* Pagination */}
