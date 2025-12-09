@@ -1,16 +1,13 @@
 id: rss_summarizer
 namespace: main
 
-variables:
-  actions_base_url: "http://localhost:3211"
-
 tasks:
   - id: summarize_feed
     type: io.kestra.plugin.core.flow.WorkingDirectory
     tasks:
       - id: clone
         type: io.kestra.plugin.git.Clone
-        url: 'https://github.com/Ashutoshbind15/dev-iterate'
+        url: "https://github.com/Ashutoshbind15/dev-iterate"
 
       - id: code
         type: io.kestra.plugin.scripts.python.Commands
@@ -37,7 +34,7 @@ tasks:
 
       - id: httpaction
         type: io.kestra.plugin.core.http.Request
-        uri: "{{vars.actions_base_url}}/feed"
+        uri: "{{ secret('ACTIONS_BASE_URL') }}/feed"
         method: POST
         formData:
           summary: '{{ outputs["summarizer-agent"]["textOutput"] }}'

@@ -1,21 +1,74 @@
 version: "3.8"
 
 services:
+  postgres:
+    image: postgres:18
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    environment:
+      POSTGRES_DB: kestra
+      POSTGRES_USER: kestra
+      POSTGRES_PASSWORD: k3str4
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+
   kestra:
     image: kestra/kestra:latest
     pull_policy: always
-    container_name: kestra
+    stop_grace_period: 6m
     ports:
       - "8080:8080"
+      - "8081:8081"
     user: root
     volumes:
       - kestra-data:/app/storage
       - /var/run/docker.sock:/var/run/docker.sock
-      - /tmp:/tmp
-    command: server local
-    stdin_open: true
-    tty: true
-    restart: unless-stopped
+      - /tmp/kestra-wd:/tmp/kestra-wd
+    command: server standalone
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file:
+      - .env.kestra.encoded
+    environment:
+      KESTRA_CONFIGURATION: |
+        datasources:
+          postgres:
+            url: jdbc:postgresql://postgres:5432/kestra
+            driverClassName: org.postgresql.Driver
+            username: kestra
+            password: k3str4
+        kestra:
+          server:
+            basic-auth:
+              username: "${KESTRA_ADMIN_USERNAME}" # it must be a valid email address
+              password: "${KESTRA_ADMIN_PASSWORD}" # it must be at least 8 characters long with uppercase letter and a number
+              # Todo: [High], only for development purposes, still needs a key
+              open-urls:
+                - "/api/v1/main/executions/webhook/"
+          
+          ai:
+            type: gemini
+            gemini:
+              model-name: gemini-2.5-flash
+              api-key: "${GEMINI_API_KEY}"
+
+          repository:
+            type: postgres
+          storage:
+            type: local
+            local:
+              base-path: "/app/storage"
+          queue:
+            type: postgres
+          tasks:
+            tmp-dir:
+              path: /tmp/kestra-wd/tmp
+          url: http://localhost:8080/
 
 volumes:
   kestra-data:
+  postgres-data:

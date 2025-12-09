@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actionsdir_rss from "../actionsdir/rss.js";
 import type * as http from "../http.js";
 import type * as httpactions_feed from "../httpactions/feed.js";
 import type * as mutations_contents from "../mutations/contents.js";
@@ -25,6 +26,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actionsdir/rss": typeof actionsdir_rss;
   http: typeof http;
   "httpactions/feed": typeof httpactions_feed;
   "mutations/contents": typeof mutations_contents;
