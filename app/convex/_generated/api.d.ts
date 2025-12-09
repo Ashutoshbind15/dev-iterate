@@ -15,10 +15,12 @@ import type * as httpactions_feed from "../httpactions/feed.js";
 import type * as mutations_contents from "../mutations/contents.js";
 import type * as mutations_diagrams from "../mutations/diagrams.js";
 import type * as mutations_lessons from "../mutations/lessons.js";
+import type * as mutations_questions from "../mutations/questions.js";
 import type * as mutations_rssSummaries from "../mutations/rssSummaries.js";
 import type * as queries_contents from "../queries/contents.js";
 import type * as queries_diagrams from "../queries/diagrams.js";
 import type * as queries_lessons from "../queries/lessons.js";
+import type * as queries_questions from "../queries/questions.js";
 import type * as queries_user from "../queries/user.js";
 
 import type {
@@ -35,10 +37,12 @@ declare const fullApi: ApiFromModules<{
   "mutations/contents": typeof mutations_contents;
   "mutations/diagrams": typeof mutations_diagrams;
   "mutations/lessons": typeof mutations_lessons;
+  "mutations/questions": typeof mutations_questions;
   "mutations/rssSummaries": typeof mutations_rssSummaries;
   "queries/contents": typeof queries_contents;
   "queries/diagrams": typeof queries_diagrams;
   "queries/lessons": typeof queries_lessons;
+  "queries/questions": typeof queries_questions;
   "queries/user": typeof queries_user;
 }>;
 

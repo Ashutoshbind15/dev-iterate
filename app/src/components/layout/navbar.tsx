@@ -7,6 +7,8 @@ import {
   Layers,
   Settings,
   User,
+  HelpCircle,
+  MessageSquare,
 } from "lucide-react";
 import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
 import { SignIn } from "../utils/sign-in";
@@ -46,6 +48,18 @@ const Navbar = () => {
           >
             <Layers className="h-4 w-4" />
             Lessons
+          </Link>
+          <Link
+            to="/corpus"
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
+              ${
+                isActive("/corpus")
+                  ? "bg-zinc-900 text-white"
+                  : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
+              }`}
+          >
+            <HelpCircle className="h-4 w-4" />
+            Corpus
           </Link>
 
           {/* Create Dropdown */}
@@ -114,6 +128,21 @@ const Navbar = () => {
                   </div>
                   <div className="text-xs text-zinc-500 mt-0.5">
                     Edit or delete lessons
+                  </div>
+                </div>
+              </Link>
+              <div className="border-t border-zinc-100 my-1" />
+              <Link
+                to="/contribute"
+                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
+              >
+                <MessageSquare className="h-5 w-5 mt-0.5" />
+                <div>
+                  <div className="font-semibold text-zinc-900">
+                    Contribute Question
+                  </div>
+                  <div className="text-xs text-zinc-500 mt-0.5">
+                    Add MCQ or descriptive questions
                   </div>
                 </div>
               </Link>

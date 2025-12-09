@@ -10,6 +10,9 @@ import ManageLessonsPage from "@/pages/manage-lessons";
 import LessonsPage from "@/pages/lessons";
 import AuthedWrapper from "./authed";
 import ProfilePage from "@/pages/profile";
+import CorpusPage from "@/pages/corpus";
+import ContributeQuestionPage from "@/pages/contribute-question";
+import QuestionViewPage from "@/pages/question-view";
 
 const RouteComp = () => {
   return (
@@ -25,9 +28,13 @@ const RouteComp = () => {
         <Route path="/manage/lessons" element={<ManageLessonsPage />} />
         {/* Viewer routes */}
         <Route path="/lessons" element={<LessonsPage />} />
+        {/* Quiz routes */}
+        <Route path="/corpus" element={<CorpusPage />} />
+        <Route path="/corpus/:id" element={<QuestionViewPage />} />
 
         <Route element={<AuthedWrapper />}>
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/contribute" element={<ContributeQuestionPage />} />
         </Route>
       </Route>
     </Routes>
