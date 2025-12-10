@@ -1,0 +1,132 @@
+id: personalized_question_generator
+namespace: main
+
+tasks:
+  - id: generate_questions
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: google/gemini-2.5-flash
+    systemMessage: |
+      You are a question generation assistant that returns ONLY valid JSON matching the schema.
+      Do not add explanations, markdown formatting, code blocks, or extra keys.
+      Generate exactly 10 personalized coding questions tailored to address the user's weaknesses and learning needs.
+      Mix question types appropriately (aim for 6-7 MCQ and 3-4 descriptive).
+      Vary difficulty levels based on the user's analysis.
+      Focus on topics mentioned in the analysis.
+      Ensure questions are practical and relevant to coding.
+
+      Example MCQ question:
+      {
+        "title": "Understanding Closure Scope",
+        "type": "mcq",
+        "questionText": "What will be logged when this code executes? var x = 10; function test() { console.log(x); var x = 20; } test();",
+        "options": ["10", "20", "undefined", "ReferenceError"],
+        "answer": "undefined",
+        "difficulty": "medium",
+        "tags": ["javascript", "closures", "scope"]
+      }
+
+      Example descriptive question:
+      {
+        "title": "Explaining Event Loop",
+        "type": "descriptive",
+        "questionText": "Explain how the JavaScript event loop handles asynchronous operations. Include examples of setTimeout and Promise execution order.",
+        "answer": "The event loop processes the call stack first, then checks the callback queue. setTimeout callbacks go to the callback queue, while Promise.then() callbacks go to the microtask queue which has higher priority. Microtasks are processed before callbacks.",
+        "difficulty": "hard",
+        "tags": ["javascript", "async", "event-loop"]
+      }
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: array
+          minItems: 10
+          maxItems: 10
+          items:
+            oneOf:
+              - type: object
+                required:
+                  [
+                    "title",
+                    "type",
+                    "questionText",
+                    "options",
+                    "answer",
+                    "difficulty",
+                    "tags",
+                  ]
+                properties:
+                  title:
+                    type: string
+                  type:
+                    type: string
+                    enum: ["mcq"]
+                  questionText:
+                    type: string
+                  options:
+                    type: array
+                    minItems: 2
+                    items:
+                      type: string
+                  answer:
+                    type: string
+                  difficulty:
+                    type: string
+                    enum: ["easy", "medium", "hard"]
+                  tags:
+                    type: array
+                    items:
+                      type: string
+              - type: object
+                required:
+                  [
+                    "title",
+                    "type",
+                    "questionText",
+                    "answer",
+                    "difficulty",
+                    "tags",
+                  ]
+                properties:
+                  title:
+                    type: string
+                  type:
+                    type: string
+                    enum: ["descriptive"]
+                  questionText:
+                    type: string
+                  answer:
+                    type: string
+                  difficulty:
+                    type: string
+                    enum: ["easy", "medium", "hard"]
+                  tags:
+                    type: array
+                    items:
+                      type: string
+    prompt: |
+      Given a comma-separated analysis of a user's learning profile, generate 10 personalized coding questions.
+
+      USER ANALYSIS:
+      {{ trigger.body.analysis }}
+
+      Return the JSON array of exactly 10 question objects:
+
+  - id: save_questions
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/personalized-questions"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "submissionId": "{{ trigger.body.submissionId }}",
+        "questions": {{ outputs.generate_questions["jsonOutput"]["questions"] }}
+      }
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"

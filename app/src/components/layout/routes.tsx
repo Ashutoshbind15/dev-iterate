@@ -14,6 +14,7 @@ import CorpusPage from "@/pages/corpus";
 import ContributeQuestionPage from "@/pages/contribute-question";
 import QuestionViewPage from "@/pages/question-view";
 import LeaderboardPage from "@/pages/leaderboard";
+import PersonalizedQuestionsViewPage from "@/pages/personalized-questions-view";
 
 const RouteComp = () => {
   return (
@@ -37,6 +38,14 @@ const RouteComp = () => {
         <Route element={<AuthedWrapper />}>
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/contribute" element={<ContributeQuestionPage />} />
+          <Route
+            path="/personalized-questions"
+            element={<PersonalizedQuestionsViewPage />}
+          />
+          <Route
+            path="/personalized-questions/:id"
+            element={<PersonalizedQuestionsViewPage />}
+          />
         </Route>
       </Route>
     </Routes>

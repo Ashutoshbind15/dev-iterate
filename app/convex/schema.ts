@@ -107,8 +107,7 @@ export default defineSchema({
     remark: v.string(), // One-line remark from Kestra AI analysis
     questionIds: v.array(v.id("questions")), // The 5 questions that triggered this analysis
     createdAt: v.number(),
-  })
-    .index("by_user", ["userId"]),
+  }).index("by_user", ["userId"]),
 
   // Track weakness analysis executions to prevent redundant runs
   weaknessAnalysisExecutions: defineTable({
@@ -123,6 +122,43 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_user_and_status", ["userId", "status"]),
+
+  // Personalized question submissions (track generation requests)
+  personalizedQuestionSubmissions: defineTable({
+    userId: v.id("users"),
+    remarkIds: v.array(v.id("userRemarks")), // The remarks used for this submission
+    analysis: v.string(), // Comma-separated analysis string
+    status: v.union(
+      v.literal("pending"), // Generation queued but not completed
+      v.literal("completed"), // Generation completed
+      v.literal("failed") // Generation failed
+    ),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_status", ["userId", "status"]),
+
+  // Personalized questions (separate from regular questions)
+  personalizedQuestions: defineTable({
+    userId: v.id("users"),
+    submissionId: v.id("personalizedQuestionSubmissions"), // Link to the submission that generated this
+    title: v.string(),
+    type: v.union(v.literal("mcq"), v.literal("descriptive")),
+    questionText: v.string(),
+    options: v.optional(v.array(v.string())),
+    correctAnswer: v.union(v.string(), v.number()),
+    difficulty: v.union(
+      v.literal("easy"),
+      v.literal("medium"),
+      v.literal("hard")
+    ),
+    tags: v.array(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_submission", ["submissionId"]),
 
   ...authTables,
 });

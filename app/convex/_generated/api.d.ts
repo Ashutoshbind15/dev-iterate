@@ -8,21 +8,25 @@
  * @module
  */
 
+import type * as actionsdir_personalizedQuestions from "../actionsdir/personalizedQuestions.js";
 import type * as actionsdir_rss from "../actionsdir/rss.js";
 import type * as actionsdir_weakness from "../actionsdir/weakness.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as httpactions_feed from "../httpactions/feed.js";
+import type * as httpactions_personalizedQuestions from "../httpactions/personalizedQuestions.js";
 import type * as httpactions_userWeakness from "../httpactions/userWeakness.js";
 import type * as mutations_contents from "../mutations/contents.js";
 import type * as mutations_diagrams from "../mutations/diagrams.js";
 import type * as mutations_lessons from "../mutations/lessons.js";
+import type * as mutations_personalizedQuestions from "../mutations/personalizedQuestions.js";
 import type * as mutations_questions from "../mutations/questions.js";
 import type * as mutations_rssSummaries from "../mutations/rssSummaries.js";
 import type * as mutations_userWeakness from "../mutations/userWeakness.js";
 import type * as queries_contents from "../queries/contents.js";
 import type * as queries_diagrams from "../queries/diagrams.js";
 import type * as queries_lessons from "../queries/lessons.js";
+import type * as queries_personalizedQuestions from "../queries/personalizedQuestions.js";
 import type * as queries_questions from "../queries/questions.js";
 import type * as queries_user from "../queries/user.js";
 import type * as scripts_createCodingQuestions from "../scripts/createCodingQuestions.js";
@@ -34,21 +38,25 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actionsdir/personalizedQuestions": typeof actionsdir_personalizedQuestions;
   "actionsdir/rss": typeof actionsdir_rss;
   "actionsdir/weakness": typeof actionsdir_weakness;
   auth: typeof auth;
   http: typeof http;
   "httpactions/feed": typeof httpactions_feed;
+  "httpactions/personalizedQuestions": typeof httpactions_personalizedQuestions;
   "httpactions/userWeakness": typeof httpactions_userWeakness;
   "mutations/contents": typeof mutations_contents;
   "mutations/diagrams": typeof mutations_diagrams;
   "mutations/lessons": typeof mutations_lessons;
+  "mutations/personalizedQuestions": typeof mutations_personalizedQuestions;
   "mutations/questions": typeof mutations_questions;
   "mutations/rssSummaries": typeof mutations_rssSummaries;
   "mutations/userWeakness": typeof mutations_userWeakness;
   "queries/contents": typeof queries_contents;
   "queries/diagrams": typeof queries_diagrams;
   "queries/lessons": typeof queries_lessons;
+  "queries/personalizedQuestions": typeof queries_personalizedQuestions;
   "queries/questions": typeof queries_questions;
   "queries/user": typeof queries_user;
   "scripts/createCodingQuestions": typeof scripts_createCodingQuestions;

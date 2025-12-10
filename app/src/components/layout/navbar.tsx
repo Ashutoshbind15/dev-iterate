@@ -10,13 +10,21 @@ import {
   HelpCircle,
   MessageSquare,
   Trophy,
+  Sparkles,
 } from "lucide-react";
-import { Authenticated, AuthLoading, Unauthenticated } from "convex/react";
+import {
+  Authenticated,
+  AuthLoading,
+  Unauthenticated,
+  useQuery,
+} from "convex/react";
+import { api } from "../../../convex/_generated/api";
 import { SignIn } from "../utils/sign-in";
 import { SignOut } from "../utils/sign-out";
 
 const Navbar = () => {
   const location = useLocation();
+  const hasAnalysis = useQuery(api.queries.user.hasUserAnalysis) ?? false;
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -168,6 +176,20 @@ const Navbar = () => {
         </Unauthenticated>
         <Authenticated>
           <div className="flex items-center gap-2">
+            {hasAnalysis && (
+              <Link
+                to="/personalized-questions"
+                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
+                  ${
+                    isActive("/personalized-questions")
+                      ? "bg-zinc-900 text-white"
+                      : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
+                  }`}
+              >
+                <Sparkles className="h-4 w-4" />
+                Personalized Questions
+              </Link>
+            )}
             <Link
               to="/profile"
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm

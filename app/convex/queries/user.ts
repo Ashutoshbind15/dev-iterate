@@ -70,3 +70,24 @@ export const getLeaderboardPaginated = query({
     };
   },
 });
+
+/**
+ * Check if the current user has any analysis (userRemarks)
+ */
+export const hasUserAnalysis = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return false;
+    }
+
+    const remark = await ctx.db
+      .query("userRemarks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    return remark !== undefined;
+  },
+});
