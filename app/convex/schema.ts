@@ -110,5 +110,19 @@ export default defineSchema({
   })
     .index("by_user", ["userId"]),
 
+  // Track weakness analysis executions to prevent redundant runs
+  weaknessAnalysisExecutions: defineTable({
+    userId: v.id("users"),
+    questionIds: v.array(v.id("questions")), // The 5 questions being analyzed
+    status: v.union(
+      v.literal("pending"), // Analysis triggered but not completed
+      v.literal("completed") // Analysis completed and remark saved
+    ),
+    triggeredAt: v.number(), // When the analysis was triggered
+    completedAt: v.optional(v.number()), // When the remark was saved
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_status", ["userId", "status"]),
+
   ...authTables,
 });

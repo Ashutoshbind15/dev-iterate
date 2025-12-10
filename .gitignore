@@ -3,3 +3,5 @@ node_modules
 .env.local
 .env.kestra
 .env.kestra.encoded
+
+requests.txt

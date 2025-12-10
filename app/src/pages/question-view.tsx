@@ -236,8 +236,8 @@ export default function QuestionViewPage() {
             {question.questionText}
           </p>
 
-          {/* Show options for MCQ even when not authenticated */}
-          {question.type === "mcq" && question.options && (
+          {/* Show options for MCQ - hide for authenticated users who haven't answered (they'll see it in the answer form) */}
+          {question.type === "mcq" && question.options && !(currentUser && !question.hasAnswered) && (
             <div className="border-t border-zinc-200 pt-6 mb-6">
               <h3 className="font-semibold text-zinc-900 mb-4 text-lg">
                 Options

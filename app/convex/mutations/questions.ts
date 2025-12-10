@@ -170,53 +170,102 @@ export const submitAnswer = mutation({
       .order("desc")
       .take(5);
 
-    // If we have exactly 5 answers (or this is the 5th), trigger analysis
     if (recentAnswers.length === 5) {
-      // Get the 5 questions with full details
-      const questionsData = await Promise.all(
-        recentAnswers.map(async (answer) => {
-          const question = await ctx.db.get(answer.questionId);
-          if (!question) return null;
-          return {
-            questionId: answer.questionId.toString(),
-            questionText: question.questionText,
-            title: question.title,
-            tags: question.tags,
-            difficulty: question.difficulty,
-            correctAnswer:
+      // Get all executions (pending and completed) in parallel
+      const [pendingExecutions, completedExecutions] = await Promise.all([
+        ctx.db
+          .query("weaknessAnalysisExecutions")
+          .withIndex("by_user_and_status", (q) =>
+            q.eq("userId", userId).eq("status", "pending")
+          )
+          .collect(),
+        ctx.db
+          .query("weaknessAnalysisExecutions")
+          .withIndex("by_user_and_status", (q) =>
+            q.eq("userId", userId).eq("status", "completed")
+          )
+          .collect(),
+      ]);
+
+      // Build sets of excluded question IDs
+      const excludedQuestionIds = new Set(
+        [...pendingExecutions, ...completedExecutions].flatMap(
+          (e) => e.questionIds
+        )
+      );
+
+      // Filter to only unanalyzed questions
+      const unanalyzedAnswers = recentAnswers.filter(
+        (answer) => !excludedQuestionIds.has(answer.questionId)
+      );
+
+      // Only proceed if we have exactly 5 unanalyzed questions
+      if (unanalyzedAnswers.length === 5) {
+        // Fetch question details and build question data in parallel
+        const unanalyzedQuestionsData = await Promise.all(
+          unanalyzedAnswers.map(async (answer) => {
+            const question = await ctx.db.get(answer.questionId);
+            if (!question) return null;
+
+            const correctAnswer =
               question.type === "mcq"
                 ? question.options?.[question.correctAnswer as number] || ""
-                : String(question.correctAnswer),
-            userAnswer: answer.answer,
-            isCorrect: answer.isCorrect,
-          };
-        })
-      );
+                : String(question.correctAnswer);
 
-      const validQuestions = questionsData.filter(
-        (q): q is NonNullable<typeof q> => q !== null
-      );
+            const userAnswer =
+              question.type === "mcq"
+                ? question.options?.[parseInt(answer.answer)] || answer.answer
+                : answer.answer;
 
-      if (validQuestions.length === 5) {
-        // Get past remarks for context
-        const pastRemarks = await ctx.db
-          .query("userRemarks")
-          .withIndex("by_user", (q) => q.eq("userId", userId))
-          .order("desc")
-          .take(10); // Get last 10 remarks
-
-        const remarksText = pastRemarks.map((r) => r.remark).join(" | ");
-
-        // Trigger Kestra flow (fire-and-forget)
-        await ctx.scheduler.runAfter(
-          0,
-          internal.actionsdir.weakness.triggerWeaknessAnalysis,
-          {
-            userId,
-            questions: validQuestions,
-            pastRemarks: remarksText || "",
-          }
+            return {
+              questionId: answer.questionId.toString(),
+              questionText: question.questionText,
+              title: question.title,
+              tags: question.tags,
+              difficulty: question.difficulty,
+              correctAnswer,
+              userAnswer,
+              isCorrect: answer.isCorrect,
+            };
+          })
         );
+
+        const validQuestions = unanalyzedQuestionsData.filter(
+          (q): q is NonNullable<typeof q> => q !== null
+        );
+
+        if (validQuestions.length === 5) {
+          const unanalyzedQuestionIds = unanalyzedAnswers.map(
+            (a) => a.questionId
+          );
+
+          // Create execution record and get past remarks in parallel
+          const [, pastRemarks] = await Promise.all([
+            ctx.db.insert("weaknessAnalysisExecutions", {
+              userId,
+              questionIds: unanalyzedQuestionIds,
+              status: "pending",
+              triggeredAt: Date.now(),
+            }),
+            ctx.db
+              .query("userRemarks")
+              .withIndex("by_user", (q) => q.eq("userId", userId))
+              .order("desc")
+              .take(10)
+              .then((remarks) => remarks.map((r) => r.remark).join(" | ")),
+          ]);
+
+          // Trigger Kestra flow (fire-and-forget)
+          await ctx.scheduler.runAfter(
+            0,
+            internal.actionsdir.weakness.triggerWeaknessAnalysis,
+            {
+              userId,
+              questions: validQuestions,
+              pastRemarks: pastRemarks || "",
+            }
+          );
+        }
       }
     }
 

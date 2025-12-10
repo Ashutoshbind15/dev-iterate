@@ -3,17 +3,24 @@ namespace: main
 
 tasks:
   - id: format_payload
-    type: io.kestra.plugin.scripts.python.Commands
-    commands:
-      - |
-        import json
+    type: io.kestra.plugin.scripts.node.Script
+    beforeCommands:
+      - npm i @kestra-io/libs
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+    containerImage: node:slim
+    script: |
+      const Kestra = require("@kestra-io/libs");
 
-        trigger_body = json.loads('''{{ trigger.body | json }}''')
-        questions = trigger_body.get('questions', [])
-        question_ids = [q['questionId'] for q in questions]
+      const rawJsonString = `{{ trigger.body }}`
 
-        # Store in vars for use in next task
-        vars.question_ids_json = json.dumps(question_ids)
+      const parsed = JSON.parse(rawJsonString)
+      const qids = []
+      for(const q of parsed.questions) {
+        qids.push(q.questionId)
+      }
+
+      Kestra.outputs({'question_ids_json': qids})
 
   - id: analyze_weakness
     type: io.kestra.plugin.ai.agent.AIAgent
@@ -30,7 +37,7 @@ tasks:
       {{ trigger.body.pastRemarks }}
 
       RECENT 5 QUESTIONS AND ANSWERS:
-      {{ trigger.body.questions | json }}
+      {{ trigger.body.questions }}
 
       For each question, you can see:
       - questionText: The question asked
@@ -53,10 +60,10 @@ tasks:
       {
         "userId": "{{ trigger.body.userId }}",
         "remark": "{{ outputs.analyze_weakness.textOutput | trim }}",
-        "questionIds": {{ outputs.format_payload.vars.question_ids_json }}
+        "questionIds": {{ outputs.format_payload["vars"]["question_ids_json"] }}
       }
 
 triggers:
   - id: webhook
     type: io.kestra.plugin.core.trigger.Webhook
-    key: "{{ secret('WEAKNESS_WEBHOOK_KEY') }}"
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"
