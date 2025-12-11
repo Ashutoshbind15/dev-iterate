@@ -83,6 +83,7 @@ export default function CreateLessonPage() {
   const [activeTab, setActiveTab] = useState<"content" | "diagram">("content");
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // todo: [medium] optimize, so that we fetch only the contents that are created by this user, also add auth rows to the content and dg schemas
   const contents = useQuery(api.queries.contents.getContents);
   const diagrams = useQuery(api.queries.diagrams.getDiagrams);
   const existingLesson = useQuery(

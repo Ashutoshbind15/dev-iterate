@@ -1,0 +1,553 @@
+id: lesson_content_generator
+namespace: main
+
+inputs:
+  - id: topic
+    type: STRING
+    displayName: "Topic for the content generation"
+
+tasks:
+  - id: generate_lesson
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: openai/gpt-5.1
+    systemMessage: |
+      You are a lesson content generator that returns ONLY valid JSON matching the TipTap/ProseMirror document schema.
+      Do not add explanations, markdown formatting, code blocks, or extra keys.
+
+      Generate educational content as a structured rich text document.
+      Use a variety of block types to make the content engaging:
+      - headings (level 1 for title, level 2 for sections, level 3 for subsections)
+      - paragraphs for explanatory text
+      - bulletList for unordered lists
+      - orderedList for sequential steps
+      - codeBlock for code examples (always specify language)
+      - blockquote for important callouts or quotes
+      - horizontalRule to separate major sections
+
+      Text formatting marks available: bold, italic, code (for inline code)
+
+      Rules:
+      - The root must be type "doc" with a "content" array
+      - All text must be wrapped in appropriate block nodes
+      - Lists contain listItem nodes, which contain paragraph nodes
+      - Empty paragraphs have no content array
+      - Code blocks must have a language attribute
+
+      Example for a JS tutoial:
+
+      ```json
+        {
+          "type": "doc",
+          "content": [
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 1
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Getting Started with JavaScript"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": "JavaScript runs almost everywhere now, but "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    },
+                    {
+                      "type": "italic"
+                    }
+                  ],
+                  "text": "let's slow down"
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ],
+                  "text": " and build a real mental model."
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "These days, tutorials throw "
+                },
+                {
+                  "type": "text",
+                  "marks": [
+                    {
+                      "type": "code"
+                    }
+                  ],
+                  "text": "npm create"
+                },
+                {
+                  "type": "text",
+                  "text": "On the internet, you may, as a beginner, stumble across "
+                }
+              ]
+            },
+            {
+              "type": "horizontalRule"
+            },
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 2
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "What is JavaScript really?"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "At its core, JavaScript lets you describe behavior: given some input, what should the browser or runtime do next?"
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 3
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "The classic path"
+                }
+              ]
+            },
+            {
+              "type": "orderedList",
+              "attrs": {
+                "start": 1,
+                "type": null
+              },
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "learn variables and values"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "practice with conditionals and loops"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "wrap ideas into small functions you can reuse"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 3
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "How do you actually get comfortable?"
+                }
+              ]
+            },
+            {
+              "type": "bulletList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "start with tiny scripts in a browser console"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "keep experimenting with different inputs"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "debug by logging values and reading errors carefully"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "repeat until patterns start to feel obvious"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 2
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "A tiny JS example"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Even a small snippet can show how values and control flow work:"
+                }
+              ]
+            },
+            {
+              "type": "codeBlock",
+              "attrs": {
+                "language": "javascript"
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "const scores = [10, 18, 21];\nlet total = 0;\nfor (const score of scores) {\n  total += score;\n}\nconsole.log(\"Average:\", total / scores.length);"
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "You read it line by line, ask what changes, and verify your understanding in the console."
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "In the long run, "
+                }
+              ]
+            },
+            {
+              "type": "blockquote",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "small, consistent reps with real code beat any crash course."
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph"
+            }
+          ]
+        }
+      ```
+
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["type", "content"]
+          properties:
+            type:
+              type: string
+              enum: ["doc"]
+            content:
+              type: array
+              minItems: 1
+              items:
+                oneOf:
+                  # Heading node
+                  - type: object
+                    required: ["type", "attrs", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["heading"]
+                      attrs:
+                        type: object
+                        required: ["level"]
+                        properties:
+                          level:
+                            type: integer
+                            minimum: 1
+                            maximum: 6
+                      content:
+                        type: array
+                        items:
+                          $ref: "#/$defs/textNode"
+                  # Paragraph node (with content)
+                  - type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["paragraph"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          $ref: "#/$defs/textNode"
+                  # Empty paragraph node
+                  - type: object
+                    required: ["type"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["paragraph"]
+                  # Horizontal rule
+                  - type: object
+                    required: ["type"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["horizontalRule"]
+                  # Bullet list
+                  - type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["bulletList"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          $ref: "#/$defs/listItem"
+                  # Ordered list
+                  - type: object
+                    required: ["type", "attrs", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["orderedList"]
+                      attrs:
+                        type: object
+                        required: ["start"]
+                        properties:
+                          start:
+                            type: integer
+                            minimum: 1
+                          type:
+                            type: ["string", "null"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          $ref: "#/$defs/listItem"
+                  # Code block
+                  - type: object
+                    required: ["type", "attrs", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["codeBlock"]
+                      attrs:
+                        type: object
+                        required: ["language"]
+                        properties:
+                          language:
+                            type: string
+                      content:
+                        type: array
+                        minItems: 1
+                        maxItems: 1
+                        items:
+                          type: object
+                          required: ["type", "text"]
+                          properties:
+                            type:
+                              type: string
+                              enum: ["text"]
+                            text:
+                              type: string
+                  # Blockquote
+                  - type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["blockquote"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: object
+                          required: ["type", "content"]
+                          properties:
+                            type:
+                              type: string
+                              enum: ["paragraph"]
+                            content:
+                              type: array
+                              items:
+                                $ref: "#/$defs/textNode"
+          $defs:
+            textNode:
+              type: object
+              required: ["type", "text"]
+              properties:
+                type:
+                  type: string
+                  enum: ["text"]
+                text:
+                  type: string
+                marks:
+                  type: array
+                  items:
+                    type: object
+                    required: ["type"]
+                    properties:
+                      type:
+                        type: string
+                        enum: ["bold", "italic", "code"]
+            listItem:
+              type: object
+              required: ["type", "content"]
+              additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  enum: ["listItem"]
+                content:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: ["type", "content"]
+                    properties:
+                      type:
+                        type: string
+                        enum: ["paragraph"]
+                      content:
+                        type: array
+                        items:
+                          $ref: "#/$defs/textNode"
+    prompt: |
+      Generate a comprehensive lesson about the following topic.
+
+      TOPIC: {{ inputs.topic }}
+
+      Create engaging educational content with:
+      - A clear title (h1)
+      - Well-organized sections (h2, h3)
+      - Code examples where relevant
+      - Lists for key points
+      - Practical tips or callouts in blockquotes
+
+      Return the TipTap document JSON:
