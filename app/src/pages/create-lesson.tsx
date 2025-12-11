@@ -21,7 +21,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
-import { Excalidraw } from "@excalidraw/excalidraw";
+import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 
 const lowlight = createLowlight(all);
@@ -48,6 +48,17 @@ function ContentPreview({ content }: { content: string }) {
   return <EditorContent editor={editor} />;
 }
 
+// Check if elements are in skeleton format (have label properties instead of bound text elements)
+function isSkeletonFormat(elements: unknown[]): boolean {
+  return elements.some(
+    (el) =>
+      typeof el === "object" &&
+      el !== null &&
+      "label" in el &&
+      typeof (el as { label?: unknown }).label === "object"
+  );
+}
+
 // Preview component for diagram
 function DiagramPreview({
   elements,
@@ -59,11 +70,16 @@ function DiagramPreview({
   const parsedElements = JSON.parse(elements);
   const parsedAppState = JSON.parse(appState);
 
+  // Convert skeleton elements (with label properties) to native Excalidraw format if needed
+  const finalElements = isSkeletonFormat(parsedElements)
+    ? convertToExcalidrawElements(parsedElements)
+    : parsedElements;
+
   return (
-    <div className="h-[300px] pointer-events-none grayscale">
+    <div className="h-[300px] grayscale">
       <Excalidraw
         initialData={{
-          elements: parsedElements,
+          elements: finalElements,
           appState: { ...parsedAppState, viewModeEnabled: true },
         }}
         viewModeEnabled={true}

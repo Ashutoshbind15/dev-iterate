@@ -2,20 +2,16 @@ import { useState } from "react";
 import { useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import {
-  BookOpen,
-  FileText,
-  PenTool,
-  ChevronRight,
-  Layers,
-  Loader2,
-} from "lucide-react";
+import { BookOpen, ChevronRight, Layers, Loader2 } from "lucide-react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
 import "@catppuccin/highlightjs/css/catppuccin-mocha.css";
-import { Excalidraw } from "@excalidraw/excalidraw";
+import {
+  Excalidraw,
+  convertToExcalidrawElements,
+} from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 
 const lowlight = createLowlight(all);
@@ -36,6 +32,17 @@ function ContentViewer({ content }: { content: string }) {
   return <EditorContent editor={editor} />;
 }
 
+// Check if elements are in skeleton format (have label properties instead of bound text elements)
+function isSkeletonFormat(elements: unknown[]): boolean {
+  return elements.some(
+    (el) =>
+      typeof el === "object" &&
+      el !== null &&
+      "label" in el &&
+      typeof (el as { label?: unknown }).label === "object"
+  );
+}
+
 // Diagram viewer component (read-only)
 function DiagramViewer({
   elements,
@@ -47,11 +54,17 @@ function DiagramViewer({
   const parsedElements = JSON.parse(elements);
   const parsedAppState = JSON.parse(appState);
 
+  // Convert skeleton elements (with label properties) to native Excalidraw format if needed
+  // This handles backwards compatibility with diagrams saved before the fix
+  const finalElements = isSkeletonFormat(parsedElements)
+    ? convertToExcalidrawElements(parsedElements)
+    : parsedElements;
+
   return (
     <div className="h-[500px] rounded-sm overflow-hidden border border-zinc-200 grayscale">
       <Excalidraw
         initialData={{
-          elements: parsedElements,
+          elements: finalElements,
           appState: { ...parsedAppState, viewModeEnabled: true },
         }}
         viewModeEnabled={true}

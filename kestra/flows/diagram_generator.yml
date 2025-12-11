@@ -1,0 +1,65 @@
+id: diagram_generator
+namespace: main
+
+inputs:
+  - id: description
+    type: STRING
+
+tasks:
+  - id: generate_diagram
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: openai/gpt-4.1
+    systemMessage: |
+      You are a technical diagram generator that creates Mermaid flowchart syntax.
+      Given a description of a system, process, or architecture, generate:
+      1. A short, descriptive title (3-6 words)
+      2. A Mermaid flowchart diagram
+
+      Rules for Mermaid syntax:
+      - Use `flowchart LR` for left-to-right flows or `flowchart TD` for top-down flows
+      - Use subgraphs to group related components with descriptive names
+      - Add emojis to subgraph names for visual clarity (📱, 🖥️, ☁️, ⚙️, 📋, etc.)
+      - Use descriptive node IDs and labels
+      - Connect nodes with arrows and optional labels for the relationship
+      - Keep the diagram clear and readable
+
+      Example output format:
+      {
+        "title": "Video Processing Pipeline",
+        "mermaid": "flowchart LR\n    subgraph Client[\"📱 Client\"]\n        C1[Upload Video]\n        C2[Request Stream]\n        C3[Play m3u8]\n    end\n\n    subgraph Server[\"🖥️ Backend Server\"]\n        S1[Receive Upload]\n        S2[Create Job]\n        S3[Generate Presigned URL]\n        S4[Return m3u8 URL]\n    end\n\n    subgraph Queue[\"📋 Message Queue\"]\n        Q1[(Job Queue)]\n    end\n\n    subgraph Workers[\"⚙️ Processor Workers\"]\n        W1[Pick Job]\n        W2[Transcode Video]\n        W3[Generate HLS Segments]\n        W4[Upload to Storage]\n        W5[Update Job Status]\n    end\n\n    subgraph Storage[\"☁️ Cloud Storage\"]\n        ST1[(Video Segments)]\n        ST2[(m3u8 Manifests)]\n    end\n\n    C1 -->|1. Upload Request| S1\n    S1 -->|2. Store Raw Video| ST1\n    S1 -->|3. Create Job| S2\n    S2 -->|4. Push to Queue| Q1\n    Q1 -->|5. Pull Job| W1\n    W1 --> W2\n    W2 --> W3\n    W3 -->|6. Upload Segments| W4\n    W4 --> ST1\n    W4 --> ST2\n    W4 -->|7. Mark Complete| W5\n    W5 -->|8. Update Status| S2\n    C2 -->|9. Request Video| S3\n    S3 -->|10. Generate URL| S4\n    S4 -->|11. Return Presigned URL| C2\n    C2 --> C3\n    C3 -->|12. Fetch m3u8| ST2\n    ST2 --> C3"
+      }
+
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["title", "mermaid"]
+          additionalProperties: false
+          properties:
+            title:
+              type: string
+              description: "A short, descriptive title for the diagram (3-6 words)"
+            mermaid:
+              type: string
+              description: "Valid Mermaid flowchart syntax"
+    prompt: |
+      Generate a Mermaid flowchart diagram for the following description:
+
+      {{ inputs.description }}
+
+      Create a clear, well-organized diagram that visualizes the key components and their relationships.
+      Use appropriate subgraphs to group related elements and add descriptive labels to connections.
+
+outputs:
+  - id: title
+    type: STRING
+    value: "{{ outputs.generate_diagram['jsonOutput']['title'] }}"
+    description: Generated diagram title
+  - id: mermaid
+    type: STRING
+    value: "{{ outputs.generate_diagram['jsonOutput']['mermaid'] }}"
+    description: Generated Mermaid syntax

@@ -15,6 +15,7 @@ export type DiagramsEditorRef = {
     scrollX: number;
     scrollY: number;
   };
+  setElements: (elements: readonly ExcalidrawElement[]) => void;
 };
 
 type DiagramsEditorProps = {
@@ -59,6 +60,9 @@ const DiagramsEditor = forwardRef<DiagramsEditorRef, DiagramsEditorProps>(
         scrollX: appState?.scrollX ?? 0,
         scrollY: appState?.scrollY ?? 0,
       }),
+      setElements: (elements: readonly ExcalidrawElement[]) => {
+        setElements(elements);
+      },
     }));
 
     return (

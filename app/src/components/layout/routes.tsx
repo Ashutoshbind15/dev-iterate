@@ -15,6 +15,7 @@ import ContributeQuestionPage from "@/pages/contribute-question";
 import QuestionViewPage from "@/pages/question-view";
 import LeaderboardPage from "@/pages/leaderboard";
 import PersonalizedQuestionsViewPage from "@/pages/personalized-questions-view";
+import MermaidTestPage from "@/pages/mermaid-test";
 
 const RouteComp = () => {
   return (
@@ -25,6 +26,7 @@ const RouteComp = () => {
         {/* Creator routes */}
         <Route path="/create/content" element={<CreateContentPage />} />
         <Route path="/create/diagram" element={<CreateDiagramPage />} />
+        <Route path="/test/mermaid" element={<MermaidTestPage />} />
         <Route path="/create/lesson" element={<CreateLessonPage />} />
         <Route path="/create/lesson/:id" element={<CreateLessonPage />} />
         <Route path="/manage/lessons" element={<ManageLessonsPage />} />

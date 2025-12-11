@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actionsdir_diagramGeneration from "../actionsdir/diagramGeneration.js";
 import type * as actionsdir_lessonContent from "../actionsdir/lessonContent.js";
 import type * as actionsdir_personalizedQuestions from "../actionsdir/personalizedQuestions.js";
 import type * as actionsdir_rss from "../actionsdir/rss.js";
@@ -31,7 +32,6 @@ import type * as queries_lessons from "../queries/lessons.js";
 import type * as queries_personalizedQuestions from "../queries/personalizedQuestions.js";
 import type * as queries_questions from "../queries/questions.js";
 import type * as queries_user from "../queries/user.js";
-import type * as scripts_createCodingQuestions from "../scripts/createCodingQuestions.js";
 
 import type {
   ApiFromModules,
@@ -40,6 +40,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actionsdir/diagramGeneration": typeof actionsdir_diagramGeneration;
   "actionsdir/lessonContent": typeof actionsdir_lessonContent;
   "actionsdir/personalizedQuestions": typeof actionsdir_personalizedQuestions;
   "actionsdir/rss": typeof actionsdir_rss;
@@ -63,7 +64,6 @@ declare const fullApi: ApiFromModules<{
   "queries/personalizedQuestions": typeof queries_personalizedQuestions;
   "queries/questions": typeof queries_questions;
   "queries/user": typeof queries_user;
-  "scripts/createCodingQuestions": typeof scripts_createCodingQuestions;
 }>;
 
 /**
