@@ -8,12 +8,14 @@
  * @module
  */
 
+import type * as actionsdir_lessonContent from "../actionsdir/lessonContent.js";
 import type * as actionsdir_personalizedQuestions from "../actionsdir/personalizedQuestions.js";
 import type * as actionsdir_rss from "../actionsdir/rss.js";
 import type * as actionsdir_weakness from "../actionsdir/weakness.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as httpactions_feed from "../httpactions/feed.js";
+import type * as httpactions_lessonContent from "../httpactions/lessonContent.js";
 import type * as httpactions_personalizedQuestions from "../httpactions/personalizedQuestions.js";
 import type * as httpactions_userWeakness from "../httpactions/userWeakness.js";
 import type * as mutations_contents from "../mutations/contents.js";
@@ -38,12 +40,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actionsdir/lessonContent": typeof actionsdir_lessonContent;
   "actionsdir/personalizedQuestions": typeof actionsdir_personalizedQuestions;
   "actionsdir/rss": typeof actionsdir_rss;
   "actionsdir/weakness": typeof actionsdir_weakness;
   auth: typeof auth;
   http: typeof http;
   "httpactions/feed": typeof httpactions_feed;
+  "httpactions/lessonContent": typeof httpactions_lessonContent;
   "httpactions/personalizedQuestions": typeof httpactions_personalizedQuestions;
   "httpactions/userWeakness": typeof httpactions_userWeakness;
   "mutations/contents": typeof mutations_contents;

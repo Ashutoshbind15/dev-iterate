@@ -1,11 +1,6 @@
 id: lesson_content_generator
 namespace: main
 
-inputs:
-  - id: topic
-    type: STRING
-    displayName: "Topic for the content generation"
-
 tasks:
   - id: generate_lesson
     type: io.kestra.plugin.ai.agent.AIAgent
@@ -541,7 +536,7 @@ tasks:
     prompt: |
       Generate a comprehensive lesson about the following topic.
 
-      TOPIC: {{ inputs.topic }}
+      TOPIC: {{ trigger.body.topic }}
 
       Create engaging educational content with:
       - A clear title (h1)
@@ -551,3 +546,20 @@ tasks:
       - Practical tips or callouts in blockquotes
 
       Return the TipTap document JSON:
+
+  - id: save_content
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/lesson-content"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topic": "{{ trigger.body.topic }}",
+        "content": {{ outputs.generate_lesson["jsonOutput"] }}
+      }
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"
