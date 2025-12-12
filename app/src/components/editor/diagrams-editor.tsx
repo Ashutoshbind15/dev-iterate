@@ -4,8 +4,15 @@ import "@excalidraw/excalidraw/index.css";
 import type {
   AppState,
   ExcalidrawInitialDataState,
+  ExcalidrawImperativeAPI,
 } from "@excalidraw/excalidraw/types";
-import { useCallback, useImperativeHandle, forwardRef, useState } from "react";
+import {
+  useCallback,
+  useImperativeHandle,
+  forwardRef,
+  useRef,
+  useState,
+} from "react";
 
 export type DiagramsEditorRef = {
   getElements: () => readonly ExcalidrawElement[];
@@ -38,6 +45,7 @@ const DiagramsEditor = forwardRef<DiagramsEditorRef, DiagramsEditorProps>(
     },
     ref
   ) => {
+    const excalidrawApiRef = useRef<ExcalidrawImperativeAPI | null>(null);
     const [elements, setElements] = useState<readonly ExcalidrawElement[]>(
       initialData.elements ?? []
     );
@@ -53,15 +61,33 @@ const DiagramsEditor = forwardRef<DiagramsEditorRef, DiagramsEditorProps>(
 
     // Expose methods to parent
     useImperativeHandle(ref, () => ({
-      getElements: () => elements,
+      getElements: () =>
+        excalidrawApiRef.current?.getSceneElements?.() ?? elements,
       getAppState: () => ({
-        viewBackgroundColor: appState?.viewBackgroundColor ?? "#ffffff",
-        zoom: appState?.zoom ?? { value: 1 },
-        scrollX: appState?.scrollX ?? 0,
-        scrollY: appState?.scrollY ?? 0,
+        viewBackgroundColor:
+          excalidrawApiRef.current?.getAppState?.().viewBackgroundColor ??
+          appState?.viewBackgroundColor ??
+          "#ffffff",
+        zoom:
+          excalidrawApiRef.current?.getAppState?.().zoom ??
+          appState?.zoom ??
+          { value: 1 },
+        scrollX:
+          excalidrawApiRef.current?.getAppState?.().scrollX ??
+          appState?.scrollX ??
+          0,
+        scrollY:
+          excalidrawApiRef.current?.getAppState?.().scrollY ??
+          appState?.scrollY ??
+          0,
       }),
       setElements: (elements: readonly ExcalidrawElement[]) => {
+        // Keep local state in sync (useful for Save fallback),
+        // but also push the new scene into Excalidraw which is uncontrolled after mount.
         setElements(elements);
+        excalidrawApiRef.current?.updateScene?.({
+          elements,
+        });
       },
     }));
 
@@ -74,6 +100,9 @@ const DiagramsEditor = forwardRef<DiagramsEditorRef, DiagramsEditorProps>(
           initialData={initialData}
           onChange={isEditable ? handleChange : undefined}
           viewModeEnabled={!isEditable}
+          excalidrawAPI={(api) => {
+            excalidrawApiRef.current = api;
+          }}
         />
       </div>
     );
