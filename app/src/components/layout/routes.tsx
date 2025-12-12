@@ -16,6 +16,8 @@ import ContributeQuestionPage from "@/pages/contribute-question";
 import QuestionViewPage from "@/pages/question-view";
 import LeaderboardPage from "@/pages/leaderboard";
 import PersonalizedQuestionsViewPage from "@/pages/personalized-questions-view";
+import PersonalizedQuestionViewPage from "@/pages/personalized-question-view";
+import PersonalizedQuestionSetViewPage from "@/pages/personalized-question-set-view";
 
 const RouteComp = () => {
   return (
@@ -46,8 +48,17 @@ const RouteComp = () => {
             element={<PersonalizedQuestionsViewPage />}
           />
           <Route
+            path="/personalized-questions/set/:id"
+            element={<PersonalizedQuestionSetViewPage />}
+          />
+          {/* Backwards-compatible route */}
+          <Route
             path="/personalized-questions/:id"
-            element={<PersonalizedQuestionsViewPage />}
+            element={<PersonalizedQuestionSetViewPage />}
+          />
+          <Route
+            path="/personalized-questions/question/:id"
+            element={<PersonalizedQuestionViewPage />}
           />
         </Route>
       </Route>

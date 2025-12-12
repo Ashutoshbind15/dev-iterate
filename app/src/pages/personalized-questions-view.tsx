@@ -1,33 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "convex/react";
-import { useParams, Link } from "react-router";
+import { Link } from "react-router";
 import { api } from "../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import {
-  ArrowLeft,
-  BookOpen,
-  Sparkles,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Clock,
-} from "lucide-react";
+import { Sparkles, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
 import type { Id } from "../../convex/_generated/dataModel";
 
 export default function PersonalizedQuestionsViewPage() {
-  const { id } = useParams<{ id: string }>();
-  const submissionId = id as Id<"personalizedQuestionSubmissions"> | undefined;
-
   const submissions = useQuery(
     api.queries.personalizedQuestions.getPersonalizedQuestionSubmissions
   );
   const personalizedQuestions = useQuery(
     api.queries.personalizedQuestions.getPersonalizedQuestions
-  );
-  const submissionData = useQuery(
-    api.queries.personalizedQuestions.getSubmissionWithQuestions,
-    submissionId ? { submissionId } : "skip"
   );
 
   const createSubmission = useMutation(
@@ -35,6 +20,16 @@ export default function PersonalizedQuestionsViewPage() {
   );
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedSubmissionId, setSelectedSubmissionId] =
+    useState<Id<"personalizedQuestionSubmissions"> | null>(null);
+
+  const splitAnalysis = (analysis: string): Array<string> => {
+    // Backwards-compatible: historically we stored comma-separated analysis.
+    return analysis
+      .split(/\r?\n|,\s+/g)
+      .map((s) => s.trim())
+      .filter((s) => s.length > 0);
+  };
 
   const handleCreatePersonalizedQuestions = async () => {
     setIsSubmitting(true);
@@ -75,170 +70,14 @@ export default function PersonalizedQuestionsViewPage() {
     }
   };
 
-  // If there's a submission ID, show that specific submission's questions
-  if (submissionId) {
-    if (submissionData === undefined) {
-      return (
-        <div className="min-h-screen bg-white p-8">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-zinc-600">Loading...</p>
-          </div>
-        </div>
-      );
-    }
+  useEffect(() => {
+    if (!submissions || submissions.length === 0) return;
+    if (selectedSubmissionId) return;
 
-    if (submissionData === null) {
-      return (
-        <div className="min-h-screen bg-white p-8">
-          <div className="max-w-4xl mx-auto">
-            <p className="text-zinc-600">Submission not found</p>
-            <Link to="/personalized-questions">
-              <Button variant="outline" className="mt-4">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Personalized Questions
-              </Button>
-            </Link>
-          </div>
-        </div>
-      );
-    }
+    const latestCompleted = submissions.find((s) => s.status === "completed");
+    setSelectedSubmissionId((latestCompleted ?? submissions[0])._id);
+  }, [submissions, selectedSubmissionId]);
 
-    const { submission, questions } = submissionData;
-
-    return (
-      <div className="min-h-screen bg-white text-zinc-900 font-sans">
-        <div className="max-w-4xl mx-auto p-8">
-          {/* Header */}
-          <div className="mb-6">
-            <Link to="/personalized-questions">
-              <Button
-                variant="outline"
-                className="mb-4 flex items-center gap-2"
-              >
-                <ArrowLeft className="h-4 w-4" />
-                Back to Personalized Questions
-              </Button>
-            </Link>
-            <h1 className="text-3xl font-bold tracking-tight text-zinc-900 mb-2">
-              Personalized Questions
-            </h1>
-            <p className="text-zinc-600">
-              Generated on {new Date(submission.createdAt).toLocaleString()}
-            </p>
-            <div className="mt-2 p-3 bg-zinc-50 rounded-lg border border-zinc-200">
-              <p className="text-sm text-zinc-600">
-                <span className="font-medium">Analysis:</span>{" "}
-                {submission.analysis}
-              </p>
-            </div>
-          </div>
-
-          {/* Questions List */}
-          {questions.length === 0 ? (
-            <div className="text-center py-12">
-              <BookOpen className="h-12 w-12 text-zinc-400 mx-auto mb-4" />
-              <p className="text-zinc-600">
-                No questions found for this submission.
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {questions.map((question, index) => (
-                <div
-                  key={question._id}
-                  className="bg-zinc-50 rounded-lg p-6 border border-zinc-200 hover:border-zinc-300 transition-colors"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        <span className="text-sm font-medium text-zinc-500">
-                          Question {index + 1}
-                        </span>
-                        <span className="text-zinc-300">•</span>
-                        <h3 className="font-semibold text-zinc-900">
-                          {question.title}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2 mb-3 flex-wrap">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(
-                            question.difficulty
-                          )}`}
-                        >
-                          {question.difficulty}
-                        </span>
-                        <span className="px-2 py-1 bg-zinc-200 text-zinc-700 text-xs rounded capitalize">
-                          {question.type === "mcq" ? "MCQ" : "Descriptive"}
-                        </span>
-                        {question.tags.length > 0 && (
-                          <div className="flex flex-wrap gap-1">
-                            {question.tags.map((tag) => (
-                              <span
-                                key={tag}
-                                className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded"
-                              >
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                      <div className="prose prose-sm max-w-none">
-                        <p className="text-zinc-700 whitespace-pre-wrap">
-                          {question.questionText}
-                        </p>
-                      </div>
-                      {question.type === "mcq" && question.options && (
-                        <div className="mt-4 space-y-2">
-                          <p className="text-sm font-medium text-zinc-700 mb-2">
-                            Options:
-                          </p>
-                          <ul className="space-y-2">
-                            {question.options.map((option, optIndex) => (
-                              <li
-                                key={optIndex}
-                                className={`px-3 py-2 rounded border ${
-                                  optIndex === question.correctAnswer
-                                    ? "bg-green-50 border-green-200 text-green-900"
-                                    : "bg-white border-zinc-200 text-zinc-700"
-                                }`}
-                              >
-                                <span className="font-medium mr-2">
-                                  {String.fromCharCode(65 + optIndex)}.
-                                </span>
-                                {option}
-                                {optIndex === question.correctAnswer && (
-                                  <span className="ml-2 text-xs text-green-600">
-                                    ✓ Correct
-                                  </span>
-                                )}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                      {question.type === "descriptive" && (
-                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded">
-                          <p className="text-sm font-medium text-green-900 mb-1">
-                            Correct Answer:
-                          </p>
-                          <p className="text-sm text-green-800">
-                            {question.correctAnswer}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  // Main page: show all submissions and questions
   return (
     <div className="min-h-screen bg-white text-zinc-900 font-sans">
       <div className="max-w-7xl mx-auto p-8">
@@ -288,48 +127,123 @@ export default function PersonalizedQuestionsViewPage() {
         {/* Submissions History */}
         {submissions && submissions.length > 0 && (
           <div className="mb-8">
-            <h2 className="text-xl font-semibold text-zinc-900 mb-4">
-              Submission History
+            <h2 className="text-xl font-semibold text-zinc-900 mb-2">
+              Choose an analysis
             </h2>
-            <div className="space-y-3">
-              {submissions.map((submission) => (
-                <div
-                  key={submission._id}
-                  className="bg-zinc-50 rounded-lg p-4 border border-zinc-200"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        {getStatusIcon(submission.status)}
-                        <span className="font-medium text-zinc-900 capitalize">
-                          {submission.status}
-                        </span>
-                        <span className="text-sm text-zinc-500">
-                          {new Date(submission.createdAt).toLocaleString()}
-                        </span>
+            <p className="text-sm text-zinc-600 mb-4">
+              Each analysis snapshot generates a different question set. Select
+              one to preview the analysis, then open its questions.
+            </p>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Selector */}
+              <div className="space-y-3">
+                {submissions.map((submission) => {
+                  const isSelected = submission._id === selectedSubmissionId;
+                  return (
+                    <button
+                      key={submission._id}
+                      type="button"
+                      onClick={() => setSelectedSubmissionId(submission._id)}
+                      className={`w-full text-left bg-zinc-50 rounded-lg p-4 border transition-colors ${
+                        isSelected
+                          ? "border-zinc-900"
+                          : "border-zinc-200 hover:border-zinc-300"
+                      }`}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {getStatusIcon(submission.status)}
+                            <span className="font-medium text-zinc-900 capitalize">
+                              {submission.status}
+                            </span>
+                            <span className="text-zinc-300">•</span>
+                            <span className="text-sm text-zinc-500">
+                              {new Date(submission.createdAt).toLocaleString()}
+                            </span>
+                          </div>
+                          <p className="text-sm text-zinc-600 line-clamp-2">
+                            {splitAnalysis(submission.analysis).join(" • ")}
+                          </p>
+                          {submission.errorMessage && (
+                            <p className="text-sm text-red-600 mt-2 line-clamp-2">
+                              <span className="font-medium">Error:</span>{" "}
+                              {submission.errorMessage}
+                            </p>
+                          )}
+                        </div>
+                        <div className="shrink-0">
+                          <span className="text-xs font-medium text-zinc-600">
+                            {isSelected ? "Selected" : "Select"}
+                          </span>
+                        </div>
                       </div>
-                      <p className="text-sm text-zinc-600 mb-2">
-                        <span className="font-medium">Analysis:</span>{" "}
-                        {submission.analysis}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Preview */}
+              <div className="bg-white border border-zinc-200 rounded-lg p-5">
+                {(() => {
+                  const selected = submissions.find(
+                    (s) => s._id === selectedSubmissionId
+                  );
+                  if (!selected) {
+                    return (
+                      <p className="text-sm text-zinc-600">
+                        Select an analysis to preview it.
                       </p>
-                      {submission.errorMessage && (
-                        <p className="text-sm text-red-600">
-                          <span className="font-medium">Error:</span>{" "}
-                          {submission.errorMessage}
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          {getStatusIcon(selected.status)}
+                          <h3 className="font-semibold text-zinc-900">
+                            Analysis preview
+                          </h3>
+                        </div>
+                        <p className="text-xs text-zinc-500">
+                          {new Date(selected.createdAt).toLocaleString()}
                         </p>
+                      </div>
+
+                      <ul className="list-disc pl-5 space-y-1 text-sm text-zinc-700">
+                        {splitAnalysis(selected.analysis).map((item, idx) => (
+                          <li key={`${selected._id}-${idx}`}>{item}</li>
+                        ))}
+                      </ul>
+
+                      {selected.status === "completed" ? (
+                        <div className="flex items-center gap-2">
+                          <Link
+                            to={`/personalized-questions/set/${selected._id}`}
+                          >
+                            <Button className="bg-zinc-900 hover:bg-zinc-800 text-white">
+                              Open question set →
+                            </Button>
+                          </Link>
+                          <p className="text-xs text-zinc-500">
+                            Practice from this specific analysis.
+                          </p>
+                        </div>
+                      ) : selected.status === "pending" ? (
+                        <div className="text-sm text-zinc-600">
+                          This set is still generating. Check back in a bit.
+                        </div>
+                      ) : (
+                        <div className="text-sm text-red-600">
+                          Generation failed for this set.
+                        </div>
                       )}
                     </div>
-                    {submission.status === "completed" && (
-                      <Link
-                        to={`/personalized-questions/${submission._id}`}
-                        className="text-sm text-zinc-900 hover:text-zinc-700 font-medium"
-                      >
-                        View Questions →
-                      </Link>
-                    )}
-                  </div>
-                </div>
-              ))}
+                  );
+                })()}
+              </div>
             </div>
           </div>
         )}
@@ -338,61 +252,73 @@ export default function PersonalizedQuestionsViewPage() {
         {personalizedQuestions && personalizedQuestions.length > 0 && (
           <div>
             <h2 className="text-xl font-semibold text-zinc-900 mb-4">
-              Your Personalized Questions
+              Your Personalized Questions (most recent first)
             </h2>
             <div className="space-y-4">
-              {personalizedQuestions.slice(0, 5).map((question) => {
-                const submission = submissions?.find(
-                  (s) => s._id === question.submissionId
-                );
-                return (
-                  <div
-                    key={question._id}
-                    className="bg-zinc-50 rounded-lg p-4 border border-zinc-200 hover:border-zinc-300 transition-colors"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <h3 className="font-semibold text-zinc-900">
-                            {question.title}
-                          </h3>
+              {personalizedQuestions.map((question) => (
+                <div
+                  key={question._id}
+                  className="bg-zinc-50 rounded-lg p-4 border border-zinc-200 hover:border-zinc-300 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2 flex-wrap">
+                        <h3 className="font-semibold text-zinc-900">
+                          {question.title}
+                        </h3>
+                        <span
+                          className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(
+                            question.difficulty
+                          )}`}
+                        >
+                          {question.difficulty}
+                        </span>
+                        <span className="text-xs text-zinc-500">
+                          {question.type === "mcq" ? "MCQ" : "Descriptive"}
+                        </span>
+                        {question.hasAnswered && (
                           <span
-                            className={`px-2 py-1 rounded text-xs font-medium ${getDifficultyColor(
-                              question.difficulty
-                            )}`}
+                            className={`text-xs font-medium ${
+                              question.isCorrect
+                                ? "text-green-700"
+                                : "text-red-700"
+                            }`}
                           >
-                            {question.difficulty}
+                            {question.isCorrect
+                              ? "Answered correctly"
+                              : "Answered incorrectly"}
                           </span>
-                          <span className="text-xs text-zinc-500">
-                            {question.type === "mcq" ? "MCQ" : "Descriptive"}
-                          </span>
-                        </div>
-                        <p className="text-sm text-zinc-600 mb-2 line-clamp-2">
-                          {question.questionText}
-                        </p>
-                        <div className="flex flex-wrap gap-1 mb-2">
-                          {question.tags.slice(0, 3).map((tag) => (
-                            <span
-                              key={tag}
-                              className="px-2 py-1 bg-zinc-200 text-zinc-700 text-xs rounded"
-                            >
-                              {tag}
-                            </span>
-                          ))}
-                        </div>
-                        {submission && (
-                          <Link
-                            to={`/personalized-questions/${submission._id}`}
-                            className="text-xs text-zinc-600 hover:text-zinc-900 underline"
-                          >
-                            View all questions from this set →
-                          </Link>
                         )}
                       </div>
+                      <p className="text-sm text-zinc-600 mb-2 line-clamp-2">
+                        {question.questionText}
+                      </p>
+                      <div className="flex flex-wrap gap-1 mb-2">
+                        {question.tags.slice(0, 6).map((tag) => (
+                          <span
+                            key={tag}
+                            className="px-2 py-1 bg-zinc-200 text-zinc-700 text-xs rounded"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                      <p className="text-xs text-zinc-500">
+                        Created {new Date(question.createdAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="shrink-0">
+                      <Link
+                        to={`/personalized-questions/question/${question._id}`}
+                      >
+                        <Button className="bg-zinc-900 hover:bg-zinc-800 text-white">
+                          Practice →
+                        </Button>
+                      </Link>
                     </div>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </div>
         )}

@@ -8,11 +8,7 @@ export default defineSchema({
     title: v.string(),
     content: v.string(), // JSON stringified TipTap content
     status: v.optional(
-      v.union(
-        v.literal("pending"),
-        v.literal("completed"),
-        v.literal("failed"),
-      ),
+      v.union(v.literal("pending"), v.literal("completed"), v.literal("failed"))
     ),
     generationTopic: v.optional(v.string()),
     errorMessage: v.optional(v.string()),
@@ -187,6 +183,21 @@ export default defineSchema({
   })
     .index("by_user", ["userId"])
     .index("by_submission", ["submissionId"]),
+
+  // User answers to personalized questions (practice)
+  personalizedAnswers: defineTable({
+    personalizedQuestionId: v.id("personalizedQuestions"),
+    userId: v.id("users"),
+    answer: v.string(), // For MCQ: index as string. For descriptive: free text.
+    isCorrect: v.boolean(),
+    submittedAt: v.number(),
+  })
+    .index("by_personalizedQuestionId", ["personalizedQuestionId"])
+    .index("by_userId", ["userId"])
+    .index("by_personalizedQuestionId_and_userId", [
+      "personalizedQuestionId",
+      "userId",
+    ]),
 
   ...authTables,
 });

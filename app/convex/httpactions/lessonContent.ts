@@ -1,6 +1,6 @@
 import { httpAction } from "../_generated/server";
 import { internal } from "../_generated/api";
-import { Id } from "../_generated/dataModel";
+import type { Id } from "../_generated/dataModel";
 
 export const saveLessonContent = httpAction(async (ctx, req) => {
   // TODO: add m2m token auth like other endpoints

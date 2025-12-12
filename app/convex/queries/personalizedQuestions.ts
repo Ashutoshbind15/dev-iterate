@@ -20,7 +20,62 @@ export const getPersonalizedQuestions = query({
       .order("desc")
       .collect();
 
-    return questions;
+    // Enrich with per-user answer status
+    const enriched = await Promise.all(
+      questions.map(async (question) => {
+        const answer = await ctx.db
+          .query("personalizedAnswers")
+          .withIndex("by_personalizedQuestionId_and_userId", (q) =>
+            q.eq("personalizedQuestionId", question._id).eq("userId", userId)
+          )
+          .first();
+
+        return {
+          ...question,
+          hasAnswered: answer !== null,
+          isCorrect: answer?.isCorrect,
+          lastAnsweredAt: answer?.submittedAt,
+        };
+      })
+    );
+
+    return enriched;
+  },
+});
+
+/**
+ * Get a single personalized question for the current user (with answer status)
+ */
+export const getPersonalizedQuestion = query({
+  args: { id: v.id("personalizedQuestions") },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      throw new ConvexError("User not authenticated");
+    }
+
+    const question = await ctx.db.get(args.id);
+    if (!question) return null;
+
+    if (question.userId !== userId) {
+      throw new ConvexError(
+        "Unauthorized: Personalized question does not belong to user"
+      );
+    }
+
+    const answer = await ctx.db
+      .query("personalizedAnswers")
+      .withIndex("by_personalizedQuestionId_and_userId", (q) =>
+        q.eq("personalizedQuestionId", question._id).eq("userId", userId)
+      )
+      .first();
+
+    return {
+      ...question,
+      hasAnswered: answer !== null,
+      isCorrect: answer?.isCorrect,
+      lastAnsweredAt: answer?.submittedAt,
+    };
   },
 });
 
@@ -75,9 +130,27 @@ export const getSubmissionWithQuestions = query({
       .order("desc")
       .collect();
 
+    const enrichedQuestions = await Promise.all(
+      questions.map(async (question) => {
+        const answer = await ctx.db
+          .query("personalizedAnswers")
+          .withIndex("by_personalizedQuestionId_and_userId", (q) =>
+            q.eq("personalizedQuestionId", question._id).eq("userId", userId)
+          )
+          .first();
+
+        return {
+          ...question,
+          hasAnswered: answer !== null,
+          isCorrect: answer?.isCorrect,
+          lastAnsweredAt: answer?.submittedAt,
+        };
+      })
+    );
+
     return {
       submission,
-      questions,
+      questions: enrichedQuestions,
     };
   },
 });

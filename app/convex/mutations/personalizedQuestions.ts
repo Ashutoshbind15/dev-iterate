@@ -242,3 +242,67 @@ export const markSubmissionFailed = internalMutation({
     return null;
   },
 });
+
+/**
+ * Submit an answer for a personalized question (practice)
+ */
+export const submitPersonalizedAnswer = mutation({
+  args: {
+    personalizedQuestionId: v.id("personalizedQuestions"),
+    answer: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      throw new ConvexError("User not authenticated");
+    }
+
+    // Ensure question exists and belongs to the current user
+    const question = await ctx.db.get(args.personalizedQuestionId);
+    if (!question) {
+      throw new ConvexError("Personalized question not found");
+    }
+    if (question.userId !== userId) {
+      throw new ConvexError(
+        "Unauthorized: Personalized question does not belong to user"
+      );
+    }
+
+    // Check if user already answered
+    const existingAnswer = await ctx.db
+      .query("personalizedAnswers")
+      .withIndex("by_personalizedQuestionId_and_userId", (q) =>
+        q
+          .eq("personalizedQuestionId", args.personalizedQuestionId)
+          .eq("userId", userId)
+      )
+      .first();
+
+    if (existingAnswer) {
+      throw new ConvexError(
+        "You have already submitted an answer to this question"
+      );
+    }
+
+    // Check answer
+    let isCorrect = false;
+    if (question.type === "mcq") {
+      const selectedIndex = parseInt(args.answer, 10);
+      isCorrect = selectedIndex === question.correctAnswer;
+    } else {
+      const userAnswer = args.answer.trim().toLowerCase();
+      const correctAnswer = String(question.correctAnswer).trim().toLowerCase();
+      isCorrect = userAnswer === correctAnswer;
+    }
+
+    const answerId = await ctx.db.insert("personalizedAnswers", {
+      personalizedQuestionId: args.personalizedQuestionId,
+      userId,
+      answer: args.answer,
+      isCorrect,
+      submittedAt: Date.now(),
+    });
+
+    return { isCorrect, answerId };
+  },
+});
