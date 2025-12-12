@@ -2,6 +2,24 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
+import {
+  DndContext,
+  PointerSensor,
+  KeyboardSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import { restrictToVerticalAxis } from "@dnd-kit/modifiers";
+import {
+  SortableContext,
+  useSortable,
+  arrayMove,
+  verticalListSortingStrategy,
+  sortableKeyboardCoordinates,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -58,6 +76,11 @@ type LessonItem = {
   order: number;
 };
 
+function sortableIdForLessonItem(item: LessonItem): string {
+  // Prefix with type so ids are stable & unique even if itemId collides across types.
+  return `${item.type}:${item.itemId}`;
+}
+
 // Preview component for content
 function ContentPreview({ content }: { content: string }) {
   const editor = useEditor({
@@ -110,6 +133,67 @@ function DiagramPreview({
         }}
         viewModeEnabled={true}
       />
+    </div>
+  );
+}
+
+function SortablePreviewItem({
+  id,
+  header,
+  actions,
+  children,
+}: {
+  id: string;
+  header: React.ReactNode;
+  actions: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    setActivatorNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={[
+        "rounded-sm border border-zinc-200 bg-white shadow-sm overflow-hidden group",
+        isDragging ? "ring-2 ring-zinc-900 shadow-lg opacity-90" : "",
+      ].join(" ")}
+    >
+      {/* Item Header */}
+      <div className="px-5 py-4 flex items-center justify-between border-b border-zinc-100 bg-zinc-50/30">
+        <div className="flex items-center gap-4 min-w-0">
+          <button
+            type="button"
+            ref={setActivatorNodeRef}
+            className="text-zinc-300 cursor-grab active:cursor-grabbing touch-none"
+            aria-label="Drag to reorder"
+            {...attributes}
+            {...listeners}
+          >
+            <GripVertical className="h-4 w-4" />
+          </button>
+          <div className="min-w-0">{header}</div>
+        </div>
+        <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+          {actions}
+        </div>
+      </div>
+
+      {/* Item Preview */}
+      <div className="p-6">{children}</div>
     </div>
   );
 }
@@ -553,7 +637,11 @@ export default function CreateLessonPage() {
       setTitle(existingLesson.title);
       setDescription(existingLesson.description ?? "");
       setTags(existingLesson.tags ?? []);
-      setSelectedItems(existingLesson.items);
+      // Ensure preview order matches the persisted `order` field.
+      const sortedItems = [...(existingLesson.items ?? [])]
+        .sort((a, b) => a.order - b.order)
+        .map((item, index) => ({ ...item, order: index }));
+      setSelectedItems(sortedItems);
       setIsInitialized(true);
     }
   }, [isEditing, existingLesson, isInitialized]);
@@ -666,6 +754,32 @@ export default function CreateLessonPage() {
 
   const getContentById = (id: string) => contents?.find((c) => c._id === id);
   const getDiagramById = (id: string) => diagrams?.find((d) => d._id === id);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 6 },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+
+    setSelectedItems((prev) => {
+      const ids = prev.map(sortableIdForLessonItem);
+      const oldIndex = ids.indexOf(String(active.id));
+      const newIndex = ids.indexOf(String(over.id));
+      if (oldIndex === -1 || newIndex === -1) return prev;
+
+      return arrayMove(prev, oldIndex, newIndex).map((it, i) => ({
+        ...it,
+        order: i,
+      }));
+    });
+  };
 
   // Show loading state when editing and lesson not yet loaded
   if (isEditing && existingLesson === undefined) {
@@ -786,74 +900,89 @@ export default function CreateLessonPage() {
                   </div>
                 ) : (
                   <div className="space-y-6 max-w-3xl mx-auto">
-                    {selectedItems.map((item, index) => {
-                      const isContent = item.type === "content";
-                      const data = isContent
-                        ? getContentById(item.itemId)
-                        : getDiagramById(item.itemId);
+                    <DndContext
+                      sensors={sensors}
+                      collisionDetection={closestCenter}
+                      onDragEnd={handleDragEnd}
+                      modifiers={[restrictToVerticalAxis]}
+                    >
+                      <SortableContext
+                        items={selectedItems.map(sortableIdForLessonItem)}
+                        strategy={verticalListSortingStrategy}
+                      >
+                        {selectedItems.map((item, index) => {
+                          const isContent = item.type === "content";
+                          const data = isContent
+                            ? getContentById(item.itemId)
+                            : getDiagramById(item.itemId);
 
-                      if (!data) return null;
+                          if (!data) return null;
 
-                      return (
-                        <div
-                          key={item.itemId}
-                          className="rounded-sm border border-zinc-200 bg-white shadow-sm overflow-hidden group"
-                        >
-                          {/* Item Header */}
-                          <div className="px-5 py-4 flex items-center justify-between border-b border-zinc-100 bg-zinc-50/30">
-                            <div className="flex items-center gap-4">
-                              <GripVertical className="h-4 w-4 text-zinc-300 cursor-grab active:cursor-grabbing" />
-                              <span className="text-xs font-bold px-2 py-1 rounded-sm bg-zinc-100 text-zinc-600 uppercase tracking-wider">
-                                {isContent ? "Content" : "Diagram"}
-                              </span>
-                              <span className="font-semibold text-zinc-900">
-                                {data.title}
-                              </span>
-                            </div>
-                            <div className="flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                              <button
-                                onClick={() => moveItem(index, "up")}
-                                disabled={index === 0}
-                                className="p-2 rounded-sm hover:bg-zinc-200 disabled:opacity-30 text-zinc-500 transition-colors"
-                              >
-                                <ChevronRight className="h-4 w-4 -rotate-90" />
-                              </button>
-                              <button
-                                onClick={() => moveItem(index, "down")}
-                                disabled={index === selectedItems.length - 1}
-                                className="p-2 rounded-sm hover:bg-zinc-200 disabled:opacity-30 text-zinc-500 transition-colors"
-                              >
-                                <ChevronRight className="h-4 w-4 rotate-90" />
-                              </button>
-                              <button
-                                onClick={() => removeItem(item.itemId)}
-                                className="p-2 rounded-sm hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-colors ml-2"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            </div>
-                          </div>
+                          const id = sortableIdForLessonItem(item);
 
-                          {/* Item Preview */}
-                          <div className="p-6">
-                            {isContent ? (
-                              <ContentPreview
-                                content={(data as { content: string }).content}
-                              />
-                            ) : (
-                              <DiagramPreview
-                                elements={
-                                  (data as { elements: string }).elements
-                                }
-                                appState={
-                                  (data as { appState: string }).appState
-                                }
-                              />
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
+                          return (
+                            <SortablePreviewItem
+                              key={id}
+                              id={id}
+                              header={
+                                <div className="flex items-center gap-3 min-w-0">
+                                  <span className="text-xs font-bold px-2 py-1 rounded-sm bg-zinc-100 text-zinc-600 uppercase tracking-wider">
+                                    {isContent ? "Content" : "Diagram"}
+                                  </span>
+                                  <span className="font-semibold text-zinc-900 truncate">
+                                    {data.title}
+                                  </span>
+                                </div>
+                              }
+                              actions={
+                                <>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItem(index, "up")}
+                                    disabled={index === 0}
+                                    className="p-2 rounded-sm hover:bg-zinc-200 disabled:opacity-30 text-zinc-500 transition-colors"
+                                  >
+                                    <ChevronRight className="h-4 w-4 -rotate-90" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => moveItem(index, "down")}
+                                    disabled={
+                                      index === selectedItems.length - 1
+                                    }
+                                    className="p-2 rounded-sm hover:bg-zinc-200 disabled:opacity-30 text-zinc-500 transition-colors"
+                                  >
+                                    <ChevronRight className="h-4 w-4 rotate-90" />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeItem(item.itemId)}
+                                    className="p-2 rounded-sm hover:bg-red-50 text-zinc-400 hover:text-red-600 transition-colors ml-2"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </button>
+                                </>
+                              }
+                            >
+                              {isContent ? (
+                                <ContentPreview
+                                  content={(data as { content: string }).content}
+                                />
+                              ) : (
+                                <DiagramPreview
+                                  elements={
+                                    (data as { elements: string }).elements
+                                  }
+                                  appState={
+                                    (data as { appState: string }).appState
+                                  }
+                                />
+                              )}
+                            </SortablePreviewItem>
+                          );
+                        })}
+                      </SortableContext>
+                    </DndContext>
                   </div>
                 )}
               </div>
