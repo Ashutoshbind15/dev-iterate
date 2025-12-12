@@ -7,6 +7,15 @@ export default defineSchema({
   contents: defineTable({
     title: v.string(),
     content: v.string(), // JSON stringified TipTap content
+    status: v.optional(
+      v.union(
+        v.literal("pending"),
+        v.literal("completed"),
+        v.literal("failed"),
+      ),
+    ),
+    generationTopic: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
     // Owner (Convex Auth user _id)
     userId: v.optional(v.id("users")),
   }).index("by_userId", ["userId"]),

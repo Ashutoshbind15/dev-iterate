@@ -1,7 +1,10 @@
 import { action } from "../_generated/server";
 import { v } from "convex/values";
 
-const triggerWebhook = async (payload: { topic: string }) => {
+const triggerWebhook = async (payload: {
+  topic: string;
+  contentId?: string;
+}) => {
   const WEBHOOK_TRIGGER_KEY = process.env.WEBHOOK_TRIGGER_KEY;
   if (!WEBHOOK_TRIGGER_KEY) {
     throw new Error("WEBHOOK_TRIGGER_KEY is not set");
@@ -39,10 +42,12 @@ const triggerWebhook = async (payload: { topic: string }) => {
 export const triggerLessonContentGeneration = action({
   args: {
     topic: v.string(),
+    contentId: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     await triggerWebhook({
       topic: args.topic,
+      contentId: args.contentId,
     });
     return null;
   },

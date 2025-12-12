@@ -7,7 +7,7 @@ import DiagramsEditor, {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useNavigate } from "react-router";
-import { Save, PenTool, Sparkles } from "lucide-react";
+import { Loader2, Save, PenTool, Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -25,6 +25,7 @@ export default function CreateDiagramPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const editorRef = useRef<DiagramsEditorRef>(null);
   const createDiagram = useMutation(api.mutations.diagrams.createDiagram);
   const triggerGeneration = useAction(
@@ -70,6 +71,8 @@ export default function CreateDiagramPage() {
       return;
     }
 
+    if (isGenerating) return;
+    setIsGenerating(true);
     setIsModalOpen(false);
 
     try {
@@ -82,16 +85,15 @@ export default function CreateDiagramPage() {
       );
       // Convert skeleton elements (with label properties) to native Excalidraw elements (with bound text elements)
       const excalidrawElements = convertToExcalidrawElements(skeletonElements);
-      await createDiagram({
-        title: result.title,
-        elements: JSON.stringify(excalidrawElements),
-        appState: JSON.stringify({ viewBackgroundColor: "#ffffff" }),
-      });
-      toast.success("Diagram generated successfully!");
       editorRef.current?.setElements(excalidrawElements);
+      setTitle((prev) => (prev.trim() ? prev : result.title));
+      toast.success("Diagram generated — review and save when ready.");
+      setDescription("");
     } catch (error) {
       toast.error("Failed to trigger diagram generation");
       console.error(error);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -120,11 +122,16 @@ export default function CreateDiagramPage() {
               <DialogTrigger asChild>
                 <Button
                   variant="outline"
+                  disabled={isGenerating}
                   className="px-6 py-2 border-zinc-300 hover:bg-zinc-50 text-zinc-700 rounded-sm
                            flex items-center gap-2 transition-transform hover:scale-105"
                 >
-                  <Sparkles className="h-4 w-4" />
-                  AI Generate
+                  {isGenerating ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-4 w-4" />
+                  )}
+                  {isGenerating ? "Generating..." : "AI Generate"}
                 </Button>
               </DialogTrigger>
               <DialogContent className="sm:max-w-[600px] bg-white">
@@ -163,11 +170,11 @@ export default function CreateDiagramPage() {
                   </Button>
                   <Button
                     onClick={handleGenerateDiagram}
-                    disabled={!description.trim()}
+                    disabled={!description.trim() || isGenerating}
                     className="bg-zinc-900 hover:bg-zinc-800 text-white"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Generate
+                    {isGenerating ? "Generating..." : "Generate"}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -175,7 +182,7 @@ export default function CreateDiagramPage() {
 
             <Button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || isGenerating}
               className="px-8 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-sm
                        flex items-center gap-2 transition-transform hover:scale-105"
             >
@@ -199,8 +206,21 @@ export default function CreateDiagramPage() {
         </div>
 
         {/* Diagram Editor */}
-        <div className="border border-zinc-200 rounded-sm overflow-hidden grayscale">
+        <div className="relative border border-zinc-200 rounded-sm overflow-hidden grayscale">
           <DiagramsEditor ref={editorRef} isEditable={true} />
+          {isGenerating ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-[1px]">
+              <div className="flex items-center gap-3 rounded-sm border border-zinc-200 bg-white px-4 py-3 shadow-sm">
+                <Loader2 className="h-5 w-5 animate-spin text-zinc-900" />
+                <div className="text-sm">
+                  <div className="font-semibold text-zinc-900">
+                    Generating diagram…
+                  </div>
+                  <div className="text-zinc-500">This can take a moment.</div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { mutation } from "../_generated/server";
+import { internalMutation, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
@@ -16,6 +16,32 @@ export const createContent = mutation({
     return await ctx.db.insert("contents", {
       title: args.title,
       content: args.content,
+      status: "completed",
+      userId,
+    });
+  },
+});
+
+export const createPendingGeneratedContent = mutation({
+  args: {
+    topic: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      throw new ConvexError("User not authenticated");
+    }
+
+    const topic = args.topic.trim();
+    if (!topic) {
+      throw new ConvexError("Topic is required");
+    }
+
+    return await ctx.db.insert("contents", {
+      title: `Generating: ${topic}`,
+      content: JSON.stringify({ type: "doc", content: [] }),
+      status: "pending",
+      generationTopic: topic,
       userId,
     });
   },
@@ -71,6 +97,47 @@ export const deleteContent = mutation({
     }
 
     await ctx.db.delete(args.id);
+    return null;
+  },
+});
+
+export const completeGeneratedContent = internalMutation({
+  args: {
+    contentId: v.id("contents"),
+    title: v.string(),
+    content: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.contentId);
+    if (!existing) {
+      throw new ConvexError("Content not found");
+    }
+
+    await ctx.db.patch(args.contentId, {
+      title: args.title,
+      content: args.content,
+      status: "completed",
+      errorMessage: undefined,
+    });
+    return null;
+  },
+});
+
+export const markGeneratedContentFailed = internalMutation({
+  args: {
+    contentId: v.id("contents"),
+    errorMessage: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db.get(args.contentId);
+    if (!existing) {
+      throw new ConvexError("Content not found");
+    }
+
+    await ctx.db.patch(args.contentId, {
+      status: "failed",
+      errorMessage: args.errorMessage,
+    });
     return null;
   },
 });

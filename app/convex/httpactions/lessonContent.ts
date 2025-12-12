@@ -1,16 +1,43 @@
 import { httpAction } from "../_generated/server";
-import { api } from "../_generated/api";
+import { internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 
 export const saveLessonContent = httpAction(async (ctx, req) => {
   // TODO: add m2m token auth like other endpoints
   const body = await req.json();
-  const { topic, content } = body ?? {};
+  const { topic, content, contentId, errorMessage } = body ?? {};
 
   if (!topic) {
     return new Response(
       JSON.stringify({ error: "Missing required field: topic" }),
       {
         status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  if (!contentId) {
+    return new Response(
+      JSON.stringify({ error: "Missing required field: contentId" }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+  }
+
+  // If there's an error message, mark generation as failed
+  if (errorMessage && typeof errorMessage === "string") {
+    await ctx.runMutation(internal.mutations.contents.markGeneratedContentFailed, {
+      contentId: contentId as Id<"contents">,
+      errorMessage,
+    });
+
+    return new Response(
+      JSON.stringify({ ok: true, message: "Content marked as failed" }),
+      {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       }
     );
@@ -49,14 +76,11 @@ export const saveLessonContent = httpAction(async (ctx, req) => {
       // If parsing fails, just use topic as title
     }
 
-    const contentId = await ctx.runMutation(
-      api.mutations.contents.createContent,
-      {
-        title,
-        content:
-          typeof content === "string" ? content : JSON.stringify(content),
-      }
-    );
+    await ctx.runMutation(internal.mutations.contents.completeGeneratedContent, {
+      contentId: contentId as Id<"contents">,
+      title,
+      content: typeof content === "string" ? content : JSON.stringify(content),
+    });
 
     return new Response(
       JSON.stringify({
@@ -72,6 +96,16 @@ export const saveLessonContent = httpAction(async (ctx, req) => {
   } catch (error) {
     const errorMessage =
       error instanceof Error ? error.message : "Failed to save lesson content";
+
+    // Best-effort: mark failed
+    try {
+      await ctx.runMutation(internal.mutations.contents.markGeneratedContentFailed, {
+        contentId: contentId as Id<"contents">,
+        errorMessage,
+      });
+    } catch (markError) {
+      console.error("Failed to mark content generation as failed:", markError);
+    }
 
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
