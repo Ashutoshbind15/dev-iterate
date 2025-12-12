@@ -8,26 +8,6 @@ import { ConvexError } from "convex/values";
  */
 export const getPersonalizedQuestions = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("personalizedQuestions"),
-      _creationTime: v.number(),
-      userId: v.id("users"),
-      submissionId: v.id("personalizedQuestionSubmissions"),
-      title: v.string(),
-      type: v.union(v.literal("mcq"), v.literal("descriptive")),
-      questionText: v.string(),
-      options: v.optional(v.array(v.string())),
-      correctAnswer: v.union(v.string(), v.number()),
-      difficulty: v.union(
-        v.literal("easy"),
-        v.literal("medium"),
-        v.literal("hard")
-      ),
-      tags: v.array(v.string()),
-      createdAt: v.number(),
-    })
-  ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -49,23 +29,6 @@ export const getPersonalizedQuestions = query({
  */
 export const getPersonalizedQuestionSubmissions = query({
   args: {},
-  returns: v.array(
-    v.object({
-      _id: v.id("personalizedQuestionSubmissions"),
-      _creationTime: v.number(),
-      userId: v.id("users"),
-      remarkIds: v.array(v.id("userRemarks")),
-      analysis: v.string(),
-      status: v.union(
-        v.literal("pending"),
-        v.literal("completed"),
-        v.literal("failed")
-      ),
-      createdAt: v.number(),
-      completedAt: v.optional(v.number()),
-      errorMessage: v.optional(v.string()),
-    })
-  ),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -89,46 +52,6 @@ export const getSubmissionWithQuestions = query({
   args: {
     submissionId: v.id("personalizedQuestionSubmissions"),
   },
-  returns: v.union(
-    v.null(),
-    v.object({
-      submission: v.object({
-        _id: v.id("personalizedQuestionSubmissions"),
-        _creationTime: v.number(),
-        userId: v.id("users"),
-        remarkIds: v.array(v.id("userRemarks")),
-        analysis: v.string(),
-        status: v.union(
-          v.literal("pending"),
-          v.literal("completed"),
-          v.literal("failed")
-        ),
-        createdAt: v.number(),
-        completedAt: v.optional(v.number()),
-        errorMessage: v.optional(v.string()),
-      }),
-      questions: v.array(
-        v.object({
-          _id: v.id("personalizedQuestions"),
-          _creationTime: v.number(),
-          userId: v.id("users"),
-          submissionId: v.id("personalizedQuestionSubmissions"),
-          title: v.string(),
-          type: v.union(v.literal("mcq"), v.literal("descriptive")),
-          questionText: v.string(),
-          options: v.optional(v.array(v.string())),
-          correctAnswer: v.union(v.string(), v.number()),
-          difficulty: v.union(
-            v.literal("easy"),
-            v.literal("medium"),
-            v.literal("hard")
-          ),
-          tags: v.array(v.string()),
-          createdAt: v.number(),
-        })
-      ),
-    })
-  ),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {

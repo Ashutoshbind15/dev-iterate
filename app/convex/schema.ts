@@ -7,19 +7,27 @@ export default defineSchema({
   contents: defineTable({
     title: v.string(),
     content: v.string(), // JSON stringified TipTap content
-  }),
+    // Owner (Convex Auth user _id)
+    userId: v.optional(v.id("users")),
+  }).index("by_userId", ["userId"]),
 
   // Excalidraw diagrams
   diagrams: defineTable({
     title: v.string(),
     elements: v.string(), // JSON stringified Excalidraw elements
     appState: v.string(), // JSON stringified Excalidraw appState
-  }),
+    // Owner (Convex Auth user _id)
+    userId: v.optional(v.id("users")),
+  }).index("by_userId", ["userId"]),
 
   // Lessons that contain ordered content and diagrams
   lessons: defineTable({
     title: v.string(),
     description: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    upvotes: v.optional(v.number()),
+    // Owner (Convex Auth user _id)
+    userId: v.optional(v.id("users")),
     items: v.optional(
       v.array(
         v.object({
@@ -29,7 +37,18 @@ export default defineSchema({
         })
       )
     ),
-  }),
+  })
+    .index("by_userId", ["userId"])
+    .index("by_upvotes", ["upvotes"]),
+
+  // Lesson upvotes (one per user)
+  lessonVotes: defineTable({
+    lessonId: v.id("lessons"),
+    userId: v.id("users"),
+  })
+    .index("by_lessonId", ["lessonId"])
+    .index("by_userId", ["userId"])
+    .index("by_lessonId_and_userId", ["lessonId", "userId"]),
 
   // RSS feed summaries
   rssSummaries: defineTable({

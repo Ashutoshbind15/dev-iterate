@@ -15,7 +15,6 @@ import { Id, Doc } from "../_generated/dataModel";
  */
 export const createPersonalizedQuestionSubmission = mutation({
   args: {},
-  returns: v.id("personalizedQuestionSubmissions"),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -127,7 +126,6 @@ export const savePersonalizedQuestions = internalMutation({
       })
     ),
   },
-  returns: v.array(v.id("personalizedQuestions")),
   handler: async (ctx, args) => {
     // Verify submission exists and is pending
     const submission = await ctx.db.get(args.submissionId);
@@ -229,7 +227,6 @@ export const markSubmissionFailed = internalMutation({
     submissionId: v.id("personalizedQuestionSubmissions"),
     errorMessage: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const submission = await ctx.db.get(args.submissionId);
     if (!submission) {

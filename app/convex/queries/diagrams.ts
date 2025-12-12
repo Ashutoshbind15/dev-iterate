@@ -1,19 +1,19 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
-
-const diagramValidator = v.object({
-  _id: v.id("diagrams"),
-  _creationTime: v.number(),
-  title: v.string(),
-  elements: v.string(),
-  appState: v.string(),
-});
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const getDiagrams = query({
   args: {},
-  returns: v.array(diagramValidator),
   handler: async (ctx) => {
-    return await ctx.db.query("diagrams").collect();
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return [];
+    }
+    return await ctx.db
+      .query("diagrams")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
   },
 });
 
@@ -21,8 +21,14 @@ export const getDiagram = query({
   args: {
     id: v.id("diagrams"),
   },
-  returns: v.union(diagramValidator, v.null()),
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return null;
+    }
+    const doc = await ctx.db.get(args.id);
+    if (!doc) return null;
+    if (doc.userId !== userId) return null;
+    return doc;
   },
 });

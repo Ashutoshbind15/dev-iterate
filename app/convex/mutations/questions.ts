@@ -18,7 +18,6 @@ export const createQuestion = mutation({
     ),
     tags: v.array(v.string()),
   },
-  returns: v.id("questions"),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -68,10 +67,6 @@ export const submitAnswer = mutation({
     questionId: v.id("questions"),
     answer: v.string(),
   },
-  returns: v.object({
-    isCorrect: v.boolean(),
-    answerId: v.id("answers"),
-  }),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -278,7 +273,6 @@ export const voteQuestion = mutation({
     questionId: v.id("questions"),
     voteType: v.union(v.literal("upvote"), v.literal("downvote")),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -354,7 +348,6 @@ export const starQuestion = mutation({
   args: {
     questionId: v.id("questions"),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {

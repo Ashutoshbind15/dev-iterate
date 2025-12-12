@@ -94,6 +94,7 @@ export default function CreateLessonPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [tags, setTags] = useState("");
   const [selectedItems, setSelectedItems] = useState<LessonItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"content" | "diagram">("content");
@@ -116,6 +117,7 @@ export default function CreateLessonPage() {
     if (isEditing && existingLesson && !isInitialized) {
       setTitle(existingLesson.title);
       setDescription(existingLesson.description ?? "");
+      setTags((existingLesson.tags ?? []).join(", "));
       setSelectedItems(existingLesson.items);
       setIsInitialized(true);
     }
@@ -161,6 +163,11 @@ export default function CreateLessonPage() {
       return;
     }
 
+    const tagArray = tags
+      .split(",")
+      .map((t) => t.trim())
+      .filter((t) => t.length > 0);
+
     setIsSaving(true);
     try {
       if (isEditing && lessonId) {
@@ -168,6 +175,7 @@ export default function CreateLessonPage() {
           id: lessonId as Id<"lessons">,
           title: title.trim(),
           description: description.trim() || undefined,
+          tags: tagArray,
           items: selectedItems,
         });
         toast.success("Lesson updated successfully!");
@@ -175,6 +183,7 @@ export default function CreateLessonPage() {
         await createLesson({
           title: title.trim(),
           description: description.trim() || undefined,
+          tags: tagArray,
           items: selectedItems,
         });
         toast.success("Lesson created successfully!");
@@ -194,10 +203,32 @@ export default function CreateLessonPage() {
   const getDiagramById = (id: string) => diagrams?.find((d) => d._id === id);
 
   // Show loading state when editing and lesson not yet loaded
-  if (isEditing && !existingLesson) {
+  if (isEditing && existingLesson === undefined) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-zinc-900" />
+      </div>
+    );
+  }
+
+  // If editing but lesson doesn't exist or user doesn't have access
+  if (isEditing && existingLesson === null) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center p-8">
+        <div className="max-w-md text-center">
+          <h1 className="text-2xl font-bold text-zinc-900 mb-2">
+            Lesson not found
+          </h1>
+          <p className="text-sm text-zinc-500 mb-6">
+            This lesson may have been deleted, or you may not have access to it.
+          </p>
+          <Link
+            to="/manage/lessons"
+            className="text-zinc-900 text-sm hover:underline font-semibold"
+          >
+            Back to Manage Lessons →
+          </Link>
+        </div>
       </div>
     );
   }
@@ -235,6 +266,15 @@ export default function CreateLessonPage() {
                 className="w-full px-3 py-2 rounded-sm border border-zinc-200 bg-zinc-50 
                          focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900
                          text-xs text-zinc-700 placeholder:text-zinc-400 transition-all resize-none"
+              />
+              <input
+                type="text"
+                value={tags}
+                onChange={(e) => setTags(e.target.value)}
+                placeholder="Tags (comma-separated)..."
+                className="w-full px-3 py-2 rounded-sm border border-zinc-200 bg-white
+                         focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900
+                         text-xs text-zinc-700 placeholder:text-zinc-400 transition-all"
               />
             </div>
           </div>

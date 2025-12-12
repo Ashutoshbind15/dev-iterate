@@ -1,10 +1,19 @@
 import { query } from "../_generated/server";
 import { v } from "convex/values";
+import { getAuthUserId } from "@convex-dev/auth/server";
 
 export const getContents = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("contents").collect();
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return [];
+    }
+    return await ctx.db
+      .query("contents")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
   },
 });
 
@@ -13,6 +22,13 @@ export const getContent = query({
     id: v.id("contents"),
   },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.id);
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return null;
+    }
+    const doc = await ctx.db.get(args.id);
+    if (!doc) return null;
+    if (doc.userId !== userId) return null;
+    return doc;
   },
 });

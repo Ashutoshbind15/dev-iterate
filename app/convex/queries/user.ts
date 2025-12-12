@@ -76,7 +76,6 @@ export const getLeaderboardPaginated = query({
  */
 export const hasUserAnalysis = query({
   args: {},
-  returns: v.boolean(),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {

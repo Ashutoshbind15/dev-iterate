@@ -40,7 +40,6 @@ export const triggerLessonContentGeneration = action({
   args: {
     topic: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     await triggerWebhook({
       topic: args.topic,

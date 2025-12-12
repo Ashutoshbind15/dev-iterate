@@ -1,288 +1,359 @@
-import { useState } from "react";
-import { useQuery } from "convex/react";
+import { useMemo, useState } from "react";
+import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
-import { BookOpen, ChevronRight, Layers, Loader2 } from "lucide-react";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
-import { all, createLowlight } from "lowlight";
-import "@catppuccin/highlightjs/css/catppuccin-mocha.css";
+import { Input } from "@/components/ui/input";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
-  Excalidraw,
-  convertToExcalidrawElements,
-} from "@excalidraw/excalidraw";
-import "@excalidraw/excalidraw/index.css";
-
-const lowlight = createLowlight(all);
-
-// Content viewer component (read-only)
-function ContentViewer({ content }: { content: string }) {
-  const editor = useEditor({
-    extensions: [StarterKit, CodeBlockLowlight.configure({ lowlight })],
-    content: JSON.parse(content),
-    editable: false,
-    editorProps: {
-      attributes: {
-        class: "prose prose-zinc max-w-none",
-      },
-    },
-  });
-
-  return <EditorContent editor={editor} />;
-}
-
-// Check if elements are in skeleton format (have label properties instead of bound text elements)
-function isSkeletonFormat(elements: unknown[]): boolean {
-  return elements.some(
-    (el) =>
-      typeof el === "object" &&
-      el !== null &&
-      "label" in el &&
-      typeof (el as { label?: unknown }).label === "object"
-  );
-}
-
-// Diagram viewer component (read-only)
-function DiagramViewer({
-  elements,
-  appState,
-}: {
-  elements: string;
-  appState: string;
-}) {
-  const parsedElements = JSON.parse(elements);
-  const parsedAppState = JSON.parse(appState);
-
-  // Convert skeleton elements (with label properties) to native Excalidraw format if needed
-  // This handles backwards compatibility with diagrams saved before the fix
-  const finalElements = isSkeletonFormat(parsedElements)
-    ? convertToExcalidrawElements(parsedElements)
-    : parsedElements;
-
-  return (
-    <div className="h-[500px] rounded-sm overflow-hidden border border-zinc-200 grayscale">
-      <Excalidraw
-        initialData={{
-          elements: finalElements,
-          appState: { ...parsedAppState, viewModeEnabled: true },
-        }}
-        viewModeEnabled={true}
-      />
-    </div>
-  );
-}
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Link } from "react-router";
+import { BookOpen, ChevronRight, Layers, ThumbsUp } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 export default function LessonsPage() {
-  const [selectedLessonId, setSelectedLessonId] =
-    useState<Id<"lessons"> | null>(null);
-  const lessons = useQuery(api.queries.lessons.getLessons);
-  const selectedLesson = useQuery(
-    api.queries.lessons.getLessonWithItems,
-    selectedLessonId ? { id: selectedLessonId } : "skip"
+  const PAGE_SIZE = 12;
+  const [sortBy, setSortBy] = useState<"newest" | "upvotes">("newest");
+  const [selectedTag, setSelectedTag] = useState<string | undefined>(undefined);
+  const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const currentUser = useQuery(api.queries.user.getCurrentUser);
+  const voteLesson = useMutation(api.mutations.lessons.voteLesson);
+
+  const allTags = useQuery(api.queries.lessons.getAllLessonTags);
+
+  const queryArgs = useMemo(
+    () => ({
+      sortBy,
+      tag: selectedTag,
+      search: search.trim() || undefined,
+    }),
+    [sortBy, selectedTag, search]
   );
 
-  const isLoadingLessons = lessons === undefined;
-  const isLoadingSelectedLesson =
-    selectedLessonId && selectedLesson === undefined;
-  const resolvedItems = selectedLesson?.resolvedItems ?? [];
+  const { results, status, loadMore } = usePaginatedQuery(
+    api.queries.lessons.listLessonsPaginated,
+    queryArgs,
+    { initialNumItems: PAGE_SIZE }
+  );
+
+  const loadedPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+  const resolvedCurrentPage = Math.min(currentPage, loadedPages);
+
+  const pageResults = useMemo(() => {
+    const start = (resolvedCurrentPage - 1) * PAGE_SIZE;
+    return results.slice(start, start + PAGE_SIZE);
+  }, [results, resolvedCurrentPage]);
+
+  const paginationItems = useMemo(() => {
+    // Convex pagination is cursor-based, so we don't know the true total page count.
+    // Only render pages we have already loaded.
+    if (loadedPages <= 7) {
+      return Array.from({ length: loadedPages }, (_, i) => i + 1);
+    }
+
+    const set = new Set<number>();
+    set.add(1);
+    set.add(2);
+    set.add(loadedPages - 1);
+    set.add(loadedPages);
+    set.add(resolvedCurrentPage);
+    set.add(resolvedCurrentPage - 1);
+    set.add(resolvedCurrentPage + 1);
+
+    return Array.from(set)
+      .filter((p) => p >= 1 && p <= loadedPages)
+      .sort((a, b) => a - b);
+  }, [loadedPages, resolvedCurrentPage]);
+
+  const goToPage = (targetPage: number) => {
+    if (targetPage < 1) return;
+    const nowLoadedPages = Math.max(1, Math.ceil(results.length / PAGE_SIZE));
+    if (targetPage <= nowLoadedPages) {
+      setCurrentPage(targetPage);
+      return;
+    }
+    if (targetPage === nowLoadedPages + 1 && status === "CanLoadMore") {
+      setCurrentPage(targetPage);
+      loadMore(PAGE_SIZE);
+    }
+  };
+
+  const handleUpvote = async (lessonId: Id<"lessons">) => {
+    try {
+      await voteLesson({ lessonId });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Failed to upvote";
+      toast.error(message);
+      console.error(error);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white text-zinc-900 font-sans">
-      <div className="flex h-[calc(100vh-64px)]">
-        {/* Sidebar - Lessons List (View Only) */}
-        <div className="w-80 border-r border-zinc-200 bg-white flex flex-col">
-          <div className="p-6 border-b border-zinc-100">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-zinc-900 text-white rounded-sm">
-                  <Layers className="h-5 w-5" />
-                </div>
-                <h2 className="font-bold tracking-tight text-zinc-900">
-                  Lessons
-                </h2>
-              </div>
-            </div>
-            <p className="text-xs text-zinc-500 font-medium uppercase tracking-wider ml-12">
-              Library
+      <div className="max-w-7xl mx-auto p-8">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-zinc-900">
+              Lessons
+            </h1>
+            <p className="text-zinc-500 mt-2">
+              Browse lessons and open one to read the full content
             </p>
           </div>
-
-          <div className="flex-1 overflow-y-auto p-4">
-            {isLoadingLessons && (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-6 w-6 animate-spin text-zinc-900" />
-              </div>
-            )}
-
-            {!isLoadingLessons && lessons.length === 0 && (
-              <div className="text-center py-12 text-zinc-500">
-                <BookOpen className="h-10 w-10 mx-auto mb-3 opacity-20" />
-                <p className="text-sm font-medium">No lessons yet</p>
-              </div>
-            )}
-
-            {!isLoadingLessons && lessons.length > 0 && (
-              <div className="space-y-1">
-                {lessons.map((lesson) => (
-                  <button
-                    key={lesson._id}
-                    onClick={() => setSelectedLessonId(lesson._id)}
-                    className={`w-full text-left p-4 rounded-sm transition-all group border-l-2
-                      ${
-                        selectedLessonId === lesson._id
-                          ? "bg-zinc-50 border-zinc-900"
-                          : "hover:bg-zinc-50 border-transparent hover:border-zinc-200"
-                      }`}
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <span
-                          className={`font-semibold truncate ${
-                            selectedLessonId === lesson._id
-                              ? "text-zinc-900"
-                              : "text-zinc-600 group-hover:text-zinc-900"
-                          }`}
-                        >
-                          {lesson.title}
-                        </span>
-                      </div>
-                      <ChevronRight
-                        className={`h-4 w-4 shrink-0 transition-transform ${
-                          selectedLessonId === lesson._id
-                            ? "text-zinc-900"
-                            : "text-zinc-300 group-hover:text-zinc-500"
-                        }`}
-                      />
-                    </div>
-                    {lesson.description && (
-                      <p className="text-xs text-zinc-500 mt-1 truncate pl-1">
-                        {lesson.description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-2 mt-3 pl-1">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-                        {lesson.items.length} items
-                      </span>
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="p-2 bg-zinc-900 text-white rounded-sm">
+            <Layers className="h-5 w-5" />
           </div>
         </div>
 
-        {/* Main Content Area (View Only) */}
-        <div className="flex-1 overflow-y-auto bg-zinc-50/30">
-          {isLoadingSelectedLesson ? (
-            <div className="h-full flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-zinc-900" />
-            </div>
-          ) : !selectedLesson ? (
-            <div className="h-full flex items-center justify-center">
-              <div className="text-center text-zinc-400">
-                <BookOpen className="h-20 w-20 mx-auto mb-6 opacity-10" />
-                <p className="text-xl font-bold text-zinc-900 mb-2">
-                  Select a lesson
-                </p>
-                <p className="text-sm text-zinc-500">
-                  Choose from the sidebar to view content
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="max-w-4xl mx-auto py-12 px-8">
-              {/* Lesson Header */}
-              <div className="mb-12 border-b border-zinc-200 pb-8">
-                <h1 className="text-4xl font-black tracking-tight text-zinc-900 mb-4">
-                  {selectedLesson.title}
-                </h1>
-                {selectedLesson.description && (
-                  <p className="text-xl text-zinc-500 font-light leading-relaxed">
-                    {selectedLesson.description}
-                  </p>
-                )}
-                <div className="flex items-center gap-6 mt-8 text-xs font-bold uppercase tracking-widest text-zinc-400">
-                  <span>{resolvedItems.length} sections</span>
-                  <span>
-                    {resolvedItems.filter((i) => i.type === "content").length}{" "}
-                    content blocks
-                  </span>
-                  <span>
-                    {resolvedItems.filter((i) => i.type === "diagram").length}{" "}
-                    diagrams
-                  </span>
-                </div>
-              </div>
+        {/* Filters */}
+        <div className="mb-6 space-y-4">
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-zinc-700">Search:</span>
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by title or description..."
+              className="max-w-md"
+            />
+          </div>
 
-              {/* Lesson Content */}
-              <div className="space-y-12">
-                {resolvedItems.map((item, index) => {
-                  if (!item.data) return null;
+          <div className="flex items-center gap-3 flex-wrap">
+            <span className="text-sm font-medium text-zinc-700">Sort:</span>
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              spacing={2}
+              size="sm"
+              value={sortBy}
+              onValueChange={(value) => {
+                if (value) setSortBy(value as "newest" | "upvotes");
+              }}
+            >
+              <ToggleGroupItem
+                value="newest"
+                aria-label="Sort by newest"
+                className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+              >
+                Newest
+              </ToggleGroupItem>
+              <ToggleGroupItem
+                value="upvotes"
+                aria-label="Sort by upvotes"
+                className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+              >
+                Most Upvoted
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
 
-                  const isContent = item.type === "content";
-
-                  return (
-                    <section
-                      key={`${item.type}-${item.data._id}`}
-                      className="scroll-mt-6"
-                    >
-                      {/* Section Header */}
-                      <div className="flex items-center gap-4 mb-6">
-                        <span className="flex items-center justify-center w-8 h-8 rounded-sm bg-zinc-900 text-white text-sm font-bold">
-                          {index + 1}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold uppercase tracking-wider text-zinc-400 border border-zinc-200 px-2 py-1 rounded-sm">
-                            {isContent ? "Content" : "Diagram"}
-                          </span>
-                          <h3 className="text-lg font-bold text-zinc-900">
-                            {item.data.title}
-                          </h3>
-                        </div>
-                      </div>
-
-                      {/* Section Content */}
-                      <div
-                        className={`rounded-sm border border-zinc-200 bg-white shadow-sm overflow-hidden
-                          ${!isContent ? "p-0" : ""}`}
-                      >
-                        <div className={isContent ? "p-8" : "p-0"}>
-                          {isContent ? (
-                            <ContentViewer
-                              content={
-                                (item.data as { content: string }).content
-                              }
-                            />
-                          ) : (
-                            <DiagramViewer
-                              elements={
-                                (item.data as { elements: string }).elements
-                              }
-                              appState={
-                                (item.data as { appState: string }).appState
-                              }
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </section>
-                  );
-                })}
-              </div>
-
-              {/* Empty State */}
-              {resolvedItems.length === 0 && (
-                <div className="text-center py-24 text-zinc-400 border border-dashed border-zinc-200 rounded-sm">
-                  <Layers className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p className="text-lg font-medium text-zinc-500">
-                    This lesson has no content yet
-                  </p>
-                </div>
-              )}
+          {allTags && allTags.length > 0 && (
+            <div className="flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-zinc-700">Tags:</span>
+              <ToggleGroup
+                type="single"
+                variant="outline"
+                spacing={2}
+                size="sm"
+                value={selectedTag || "all"}
+                onValueChange={(value) => {
+                  if (value === "all") setSelectedTag(undefined);
+                  else if (value) setSelectedTag(value);
+                }}
+              >
+                <ToggleGroupItem
+                  value="all"
+                  aria-label="All tags"
+                  className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+                >
+                  All
+                </ToggleGroupItem>
+                {allTags.map((tag) => (
+                  <ToggleGroupItem
+                    key={tag}
+                    value={tag}
+                    aria-label={`Filter by ${tag}`}
+                    className="data-[state=on]:bg-zinc-900 data-[state=on]:text-white data-[state=on]:border-zinc-900"
+                  >
+                    {tag}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             </div>
           )}
         </div>
+
+        {/* Grid */}
+        {status === "LoadingFirstPage" ? (
+          <div className="py-16 text-center text-zinc-500">
+            Loading lessons...
+          </div>
+        ) : results.length === 0 ? (
+          <div className="text-center py-24 border-2 border-dashed border-zinc-200 rounded-sm bg-zinc-50">
+            <BookOpen className="h-12 w-12 mx-auto mb-4 opacity-20 text-zinc-500" />
+            <p className="text-xl font-bold text-zinc-400">No lessons found</p>
+            <p className="text-sm text-zinc-500 mt-2">
+              Try adjusting filters or search
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {pageResults.map((lesson) => (
+              <Link
+                key={lesson._id}
+                to={`/lessons/${lesson._id}`}
+                className="block"
+              >
+                <div className="h-full p-5 rounded-sm border border-zinc-200 bg-white hover:border-zinc-400 transition-all hover:shadow-sm">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-lg font-bold text-zinc-900 truncate">
+                        {lesson.title}
+                      </div>
+                      {lesson.description && (
+                        <div className="text-sm text-zinc-500 mt-1 line-clamp-2">
+                          {lesson.description}
+                        </div>
+                      )}
+                    </div>
+                    <ChevronRight className="h-4 w-4 text-zinc-300 shrink-0 mt-1" />
+                  </div>
+
+                  {lesson.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-4">
+                      {lesson.tags.slice(0, 4).map((tag: string) => (
+                        <span
+                          key={tag}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                      {lesson.tags.length > 4 && (
+                        <span className="px-2 py-1 text-xs text-zinc-500">
+                          +{lesson.tags.length - 4}
+                        </span>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <div className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                      {lesson.itemCount} items
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleUpvote(lesson._id);
+                        }}
+                        disabled={!currentUser}
+                        className={`inline-flex items-center gap-2 px-2 py-1 rounded border text-xs transition-colors ${
+                          !currentUser
+                            ? "text-zinc-300 border-zinc-200 cursor-not-allowed"
+                            : lesson.hasUpvoted
+                            ? "text-green-700 border-green-200 bg-green-50"
+                            : "text-zinc-600 border-zinc-200 hover:text-green-700 hover:border-green-200 hover:bg-green-50"
+                        }`}
+                      >
+                        <ThumbsUp className="h-3.5 w-3.5" />
+                        {lesson.upvotes}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+
+        {/* Pagination */}
+        {results.length > 0 && (
+          <div className="mt-8 space-y-3">
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToPage(resolvedCurrentPage - 1);
+                    }}
+                    className={cn(
+                      resolvedCurrentPage <= 1 &&
+                        "pointer-events-none opacity-50"
+                    )}
+                  />
+                </PaginationItem>
+
+                {paginationItems.map((p, idx) => {
+                  const prev = paginationItems[idx - 1];
+                  const needsEllipsis = prev !== undefined && p - prev > 1;
+                  return (
+                    <span key={p} className="contents">
+                      {needsEllipsis && (
+                        <PaginationItem>
+                          <PaginationEllipsis />
+                        </PaginationItem>
+                      )}
+                      <PaginationItem>
+                        <PaginationLink
+                          href="#"
+                          isActive={p === resolvedCurrentPage}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            goToPage(p);
+                          }}
+                        >
+                          {p}
+                        </PaginationLink>
+                      </PaginationItem>
+                    </span>
+                  );
+                })}
+
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      goToPage(resolvedCurrentPage + 1);
+                    }}
+                    className={cn(
+                      status === "LoadingMore" &&
+                        "pointer-events-none opacity-50",
+                      status === "Exhausted" &&
+                        resolvedCurrentPage >= loadedPages &&
+                        "pointer-events-none opacity-50"
+                    )}
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+
+            {status === "LoadingMore" && (
+              <div className="text-center text-sm text-zinc-500">
+                Loading more lessons...
+              </div>
+            )}
+            {status === "Exhausted" && (
+              <div className="text-center text-sm text-zinc-500">
+                No more lessons to load
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

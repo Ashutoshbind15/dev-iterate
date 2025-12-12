@@ -39,10 +39,6 @@ export const triggerDiagramGeneration = action({
   args: {
     description: v.string(),
   },
-  returns: v.object({
-    title: v.string(),
-    mermaid: v.string(),
-  }),
   handler: async (_ctx, args) => {
     const result = await triggerSyncFlow({
       description: args.description,

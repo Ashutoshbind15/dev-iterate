@@ -7,7 +7,6 @@ export const saveRemark = internalMutation({
     remark: v.string(),
     questionIds: v.array(v.id("questions")),
   },
-  returns: v.id("userRemarks"),
   handler: async (ctx, args) => {
     // Save the remark
     const remarkId = await ctx.db.insert("userRemarks", {

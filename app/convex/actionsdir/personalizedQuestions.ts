@@ -46,7 +46,6 @@ export const triggerQuestionGeneration = internalAction({
     submissionId: v.id("personalizedQuestionSubmissions"),
     analysis: v.string(),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     await triggerWebhook({
       userId: args.userId,

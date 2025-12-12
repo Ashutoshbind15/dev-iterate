@@ -42,7 +42,6 @@ export const triggerSummarization = internalAction({
   args: {
     rssUrls: v.array(v.string()),
   },
-  returns: v.null(),
   handler: async (ctx, args) => {
     await triggerWebhook(args.rssUrls);
     return null;
