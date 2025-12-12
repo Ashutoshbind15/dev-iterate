@@ -163,13 +163,16 @@ export default function CorpusPage() {
           </div>
 
           {allTags && allTags.length > 0 && (
-            <div className="flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-zinc-700">Tags:</span>
+            <div className="grid grid-cols-[max-content,1fr] items-start gap-x-3 gap-y-2">
+              <span className="text-sm font-medium text-zinc-700 pt-1">
+                Tags:
+              </span>
               <ToggleGroup
                 type="single"
                 variant="outline"
                 spacing={2}
                 size="sm"
+                className="w-full flex-wrap justify-start min-w-0"
                 value={selectedTag || "all"}
                 onValueChange={(value) => {
                   if (value === "all") {

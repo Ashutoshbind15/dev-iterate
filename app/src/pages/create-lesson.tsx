@@ -3,6 +3,8 @@ import { useQuery, useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useNavigate, Link, useParams } from "react-router";
 import {
@@ -16,12 +18,16 @@ import {
   Eye,
   ChevronRight,
   Loader2,
+  X,
 } from "lucide-react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { all, createLowlight } from "lowlight";
-import { Excalidraw, convertToExcalidrawElements } from "@excalidraw/excalidraw";
+import {
+  Excalidraw,
+  convertToExcalidrawElements,
+} from "@excalidraw/excalidraw";
 import "@excalidraw/excalidraw/index.css";
 
 const lowlight = createLowlight(all);
@@ -94,7 +100,8 @@ export default function CreateLessonPage() {
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [tags, setTags] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
   const [selectedItems, setSelectedItems] = useState<LessonItem[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"content" | "diagram">("content");
@@ -117,11 +124,33 @@ export default function CreateLessonPage() {
     if (isEditing && existingLesson && !isInitialized) {
       setTitle(existingLesson.title);
       setDescription(existingLesson.description ?? "");
-      setTags((existingLesson.tags ?? []).join(", "));
+      setTags(existingLesson.tags ?? []);
       setSelectedItems(existingLesson.items);
       setIsInitialized(true);
     }
   }, [isEditing, existingLesson, isInitialized]);
+
+  const addTag = () => {
+    const trimmedTag = tagInput.trim();
+    if (trimmedTag && !tags.includes(trimmedTag)) {
+      setTags([...tags, trimmedTag]);
+      setTagInput("");
+    } else if (tags.includes(trimmedTag)) {
+      toast.error("Tag already exists");
+      setTagInput("");
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setTags(tags.filter((tag) => tag !== tagToRemove));
+  };
+
+  const handleTagInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      addTag();
+    }
+  };
 
   const addItem = (type: "content" | "diagram", itemId: string) => {
     if (selectedItems.some((item) => item.itemId === itemId)) {
@@ -163,11 +192,6 @@ export default function CreateLessonPage() {
       return;
     }
 
-    const tagArray = tags
-      .split(",")
-      .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-
     setIsSaving(true);
     try {
       if (isEditing && lessonId) {
@@ -175,7 +199,7 @@ export default function CreateLessonPage() {
           id: lessonId as Id<"lessons">,
           title: title.trim(),
           description: description.trim() || undefined,
-          tags: tagArray,
+          tags: tags,
           items: selectedItems,
         });
         toast.success("Lesson updated successfully!");
@@ -183,7 +207,7 @@ export default function CreateLessonPage() {
         await createLesson({
           title: title.trim(),
           description: description.trim() || undefined,
-          tags: tagArray,
+          tags: tags,
           items: selectedItems,
         });
         toast.success("Lesson created successfully!");
@@ -267,15 +291,47 @@ export default function CreateLessonPage() {
                          focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900
                          text-xs text-zinc-700 placeholder:text-zinc-400 transition-all resize-none"
               />
-              <input
-                type="text"
-                value={tags}
-                onChange={(e) => setTags(e.target.value)}
-                placeholder="Tags (comma-separated)..."
-                className="w-full px-3 py-2 rounded-sm border border-zinc-200 bg-white
-                         focus:outline-none focus:ring-1 focus:ring-zinc-900 focus:border-zinc-900
-                         text-xs text-zinc-700 placeholder:text-zinc-400 transition-all"
-              />
+              <div className="space-y-2">
+                <div className="flex gap-2">
+                  <Input
+                    type="text"
+                    value={tagInput}
+                    onChange={(e) => setTagInput(e.target.value)}
+                    onKeyDown={handleTagInputKeyDown}
+                    placeholder="Add tag..."
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    onClick={addTag}
+                    className="px-3 py-2 bg-zinc-900 hover:bg-zinc-800 text-white rounded-sm
+                             flex items-center gap-1 transition-all"
+                  >
+                    <Plus className="h-3 w-3" />
+                    Add
+                  </Button>
+                </div>
+                {tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {tags.map((tag) => (
+                      <Badge
+                        key={tag}
+                        variant="outline"
+                        className="flex items-center gap-1 px-2 py-1 text-xs"
+                      >
+                        <span>{tag}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeTag(tag)}
+                          className="ml-1 hover:bg-zinc-100 rounded-full p-0.5 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 

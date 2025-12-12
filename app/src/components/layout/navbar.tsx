@@ -1,17 +1,5 @@
 import { Link, useLocation } from "react-router";
-import {
-  BookOpen,
-  Plus,
-  FileText,
-  PenTool,
-  Layers,
-  Settings,
-  User,
-  HelpCircle,
-  MessageSquare,
-  Trophy,
-  Sparkles,
-} from "lucide-react";
+import { BookOpen, Layers, User, HelpCircle, Sparkles } from "lucide-react";
 import {
   Authenticated,
   AuthLoading,
@@ -21,6 +9,15 @@ import {
 import { api } from "../../../convex/_generated/api";
 import { SignIn } from "../utils/sign-in";
 import { SignOut } from "../utils/sign-out";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+} from "@/components/ui/navigation-menu";
+import { cn } from "@/lib/utils";
 
 const Navbar = () => {
   const location = useLocation();
@@ -44,152 +41,174 @@ const Navbar = () => {
           </span>
         </Link>
 
-        {/* Navigation Links */}
-        <div className="flex items-center gap-2">
-          <Link
-            to="/lessons"
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
-              ${
-                isActive("/lessons")
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
-              }`}
-          >
-            <Layers className="h-4 w-4" />
-            Lessons
-          </Link>
-          <Link
-            to="/corpus"
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
-              ${
-                isActive("/corpus")
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
-              }`}
-          >
-            <HelpCircle className="h-4 w-4" />
-            Corpus
-          </Link>
-          <Link
-            to="/leaderboard"
-            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
-              ${
-                isActive("/leaderboard")
-                  ? "bg-zinc-900 text-white"
-                  : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
-              }`}
-          >
-            <Trophy className="h-4 w-4" />
-            Leaderboard
-          </Link>
+        {/* Navigation */}
+        <NavigationMenu viewport={false}>
+          <NavigationMenuList className="gap-1">
+            {/* Lessons */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="rounded-sm">
+                <span className="inline-flex items-center gap-2">
+                  <Layers className="h-4 w-4" />
+                  Lessons
+                </span>
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-1 w-[280px]">
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link to="/lessons" data-active={isActive("/lessons")}>
+                        <span className="font-medium">View lessons</span>
+                        <span className="text-muted-foreground text-xs">
+                          Browse and read lessons
+                        </span>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <Authenticated>
+                    <li>
+                      <NavigationMenuLink asChild>
+                        <Link
+                          to="/manage/lessons"
+                          data-active={isActive("/manage/lessons")}
+                        >
+                          <span className="font-medium">Manage lessons</span>
+                          <span className="text-muted-foreground text-xs">
+                            Create, edit, and delete lessons
+                          </span>
+                        </Link>
+                      </NavigationMenuLink>
+                    </li>
+                  </Authenticated>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
 
-          {/* Create Dropdown */}
-          <div className="relative group">
-            <button
-              className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
-                ${
-                  isActive("/create") || isActive("/manage")
-                    ? "bg-zinc-900 text-white"
-                    : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
-                }`}
-            >
-              <Plus className="h-4 w-4" />
-              Create
-            </button>
+            {/* Questions */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="rounded-sm">
+                <span className="inline-flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4" />
+                  Questions
+                </span>
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-1 w-[320px]">
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link to="/corpus" data-active={isActive("/corpus")}>
+                        <span className="font-medium">Corpus</span>
+                        <span className="text-muted-foreground text-xs">
+                          Practice questions and quizzes
+                        </span>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to="/leaderboard"
+                        data-active={isActive("/leaderboard")}
+                      >
+                        <span className="font-medium">Leaderboard</span>
+                        <span className="text-muted-foreground text-xs">
+                          See top performers
+                        </span>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
+                  <Authenticated>
+                    <li>
+                      <NavigationMenuLink asChild>
+                        <Link
+                          to="/contribute"
+                          data-active={isActive("/contribute")}
+                        >
+                          <span className="font-medium">Contribute</span>
+                          <span className="text-muted-foreground text-xs">
+                            Add questions to the corpus
+                          </span>
+                        </Link>
+                      </NavigationMenuLink>
+                    </li>
+                  </Authenticated>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
 
-            {/* Dropdown */}
-            <div className="absolute right-0 top-full mt-2 w-64 p-2 bg-white border border-zinc-200 shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
-              <Link
-                to="/create/content"
-                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-              >
-                <FileText className="h-5 w-5 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-zinc-900">
-                    Content Block
-                  </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
-                    Rich text content editor
-                  </div>
-                </div>
-              </Link>
-              <Link
-                to="/create/diagram"
-                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-              >
-                <PenTool className="h-5 w-5 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-zinc-900">Diagram</div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
-                    Visual diagram editor
-                  </div>
-                </div>
-              </Link>
-              <div className="border-t border-zinc-100 my-1" />
-              <Link
-                to="/create/lesson"
-                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-              >
-                <BookOpen className="h-5 w-5 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-zinc-900">New Lesson</div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
-                    Combine content & diagrams
-                  </div>
-                </div>
-              </Link>
-              <Link
-                to="/manage/lessons"
-                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-              >
-                <Settings className="h-5 w-5 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-zinc-900">
-                    Manage Lessons
-                  </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
-                    Edit or delete lessons
-                  </div>
-                </div>
-              </Link>
-              <div className="border-t border-zinc-100 my-1" />
-              <Link
-                to="/contribute"
-                className="flex items-start gap-3 px-4 py-3 text-sm text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900 transition-colors"
-              >
-                <MessageSquare className="h-5 w-5 mt-0.5" />
-                <div>
-                  <div className="font-semibold text-zinc-900">
-                    Contribute Question
-                  </div>
-                  <div className="text-xs text-zinc-500 mt-0.5">
-                    Add MCQ or descriptive questions
-                  </div>
-                </div>
-              </Link>
-            </div>
-          </div>
-        </div>
+            {/* Improve */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="rounded-sm">
+                <span className="inline-flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Improve
+                </span>
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-1 w-[320px]">
+                  <Authenticated>
+                    {hasAnalysis ? (
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to="/personalized-questions"
+                            data-active={isActive("/personalized-questions")}
+                          >
+                            <span className="font-medium">
+                              Personalized questions
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              Focus on your weak areas
+                            </span>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    ) : (
+                      <li>
+                        <div
+                          className={cn(
+                            "flex flex-col gap-1 rounded-sm p-2 text-sm opacity-60 cursor-not-allowed select-none"
+                          )}
+                          aria-disabled="true"
+                        >
+                          <span className="font-medium">
+                            Personalized questions
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            Available after your analysis is ready
+                          </span>
+                        </div>
+                      </li>
+                    )}
+                  </Authenticated>
+                  <Unauthenticated>
+                    <li>
+                      <div
+                        className={cn(
+                          "flex flex-col gap-1 rounded-sm p-2 text-sm opacity-60 select-none"
+                        )}
+                        aria-disabled="true"
+                      >
+                        <span className="font-medium">
+                          Personalized questions
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          Sign in to access improve tools
+                        </span>
+                      </div>
+                    </li>
+                  </Unauthenticated>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+          </NavigationMenuList>
+        </NavigationMenu>
+
         <AuthLoading>Loading...</AuthLoading>
         <Unauthenticated>
           <SignIn />
         </Unauthenticated>
         <Authenticated>
           <div className="flex items-center gap-2">
-            {hasAnalysis && (
-              <Link
-                to="/personalized-questions"
-                className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
-                  ${
-                    isActive("/personalized-questions")
-                      ? "bg-zinc-900 text-white"
-                      : "text-zinc-600 hover:text-zinc-900 hover:border-zinc-200"
-                  }`}
-              >
-                <Sparkles className="h-4 w-4" />
-                Personalized Questions
-              </Link>
-            )}
             <Link
               to="/profile"
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-all duration-200 border border-transparent rounded-sm
