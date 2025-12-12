@@ -556,6 +556,7 @@ tasks:
     body: |
       {
         "topic": "{{ trigger.body.topic }}",
+        "contentId": "{{ trigger.body.contentId }}",
         "content": {{ outputs.generate_lesson["jsonOutput"] }}
       }
 

@@ -29,6 +29,9 @@ export default function CreateContentPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const editorRef = useRef<RichTextEditorRef>(null);
   const createContent = useMutation(api.mutations.contents.createContent);
+  const createPendingGeneratedContent = useMutation(
+    api.mutations.contents.createPendingGeneratedContent
+  );
   const triggerLessonGeneration = useAction(api.actionsdir.lessonContent.triggerLessonContentGeneration);
   const navigate = useNavigate();
 
@@ -67,8 +70,14 @@ export default function CreateContentPage() {
 
     setIsGenerating(true);
     try {
-      await triggerLessonGeneration({ topic: topic.trim() });
-      toast.success("Lesson generation job submitted successfully!");
+      const contentId = await createPendingGeneratedContent({
+        topic: topic.trim(),
+      });
+      await triggerLessonGeneration({
+        topic: topic.trim(),
+        contentId,
+      });
+      toast.success("Content generation started!");
       setTopic("");
       setIsDialogOpen(false);
     } catch (error) {

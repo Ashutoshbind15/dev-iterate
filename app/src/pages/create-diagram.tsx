@@ -25,6 +25,7 @@ export default function CreateDiagramPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [description, setDescription] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const editorRef = useRef<DiagramsEditorRef>(null);
   const createDiagram = useMutation(api.mutations.diagrams.createDiagram);
   const triggerGeneration = useAction(
@@ -70,6 +71,8 @@ export default function CreateDiagramPage() {
       return;
     }
 
+    if (isGenerating) return;
+    setIsGenerating(true);
     setIsModalOpen(false);
 
     try {
@@ -89,9 +92,12 @@ export default function CreateDiagramPage() {
       });
       toast.success("Diagram generated successfully!");
       editorRef.current?.setElements(excalidrawElements);
+      setDescription("");
     } catch (error) {
       toast.error("Failed to trigger diagram generation");
       console.error(error);
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -163,11 +169,11 @@ export default function CreateDiagramPage() {
                   </Button>
                   <Button
                     onClick={handleGenerateDiagram}
-                    disabled={!description.trim()}
+                    disabled={!description.trim() || isGenerating}
                     className="bg-zinc-900 hover:bg-zinc-800 text-white"
                   >
                     <Sparkles className="h-4 w-4 mr-2" />
-                    Generate
+                    {isGenerating ? "Generating..." : "Generate"}
                   </Button>
                 </DialogFooter>
               </DialogContent>

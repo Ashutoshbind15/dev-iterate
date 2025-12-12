@@ -153,6 +153,18 @@ export default function CreateLessonPage() {
   };
 
   const addItem = (type: "content" | "diagram", itemId: string) => {
+    if (type === "content") {
+      const content = contents?.find((c) => c._id === itemId);
+      const status = (content as { status?: string } | undefined)?.status ?? "completed";
+      if (status === "pending") {
+        toast.error("This content is still generating. Please wait.");
+        return;
+      }
+      if (status === "failed") {
+        toast.error("This content failed to generate.");
+        return;
+      }
+    }
     if (selectedItems.some((item) => item.itemId === itemId)) {
       toast.error("This item is already added");
       return;
@@ -380,13 +392,26 @@ export default function CreateLessonPage() {
                   </div>
                 )}
                 {contents?.map((content) => (
+                  (() => {
+                    const status =
+                      (content as { status?: string }).status ?? "completed";
+                    const isPending = status === "pending";
+                    const isFailed = status === "failed";
+                    const isSelected = selectedItems.some(
+                      (i) => i.itemId === content._id
+                    );
+                    return (
                   <div
                     key={content._id}
-                    className={`p-4 rounded-sm border transition-all cursor-pointer group
+                    className={`p-4 rounded-sm border transition-all group
                       ${
-                        selectedItems.some((i) => i.itemId === content._id)
+                        isSelected
                           ? "border-zinc-900 bg-zinc-900 text-white"
-                          : "border-zinc-200 hover:border-zinc-400 bg-white"
+                          : isPending
+                          ? "border-zinc-200 bg-white opacity-70 cursor-not-allowed"
+                          : isFailed
+                          ? "border-red-200 bg-white opacity-80 cursor-not-allowed"
+                          : "border-zinc-200 hover:border-zinc-400 bg-white cursor-pointer"
                       }`}
                     onClick={() => addItem("content", content._id)}
                   >
@@ -394,22 +419,40 @@ export default function CreateLessonPage() {
                       <div className="flex items-center gap-3">
                         <FileText
                           className={`h-4 w-4 ${
-                            selectedItems.some((i) => i.itemId === content._id)
+                            isSelected
                               ? "text-zinc-300"
                               : "text-zinc-500"
                           }`}
                         />
-                        <span className="font-medium">{content.title}</span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-medium truncate">
+                            {content.title}
+                          </span>
+                          {isPending && (
+                            <span className="text-xs font-semibold uppercase tracking-wider text-amber-600">
+                              Generating…
+                            </span>
+                          )}
+                          {isFailed && (
+                            <span className="text-xs font-semibold uppercase tracking-wider text-red-600">
+                              Failed
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <Plus
                         className={`h-4 w-4 ${
-                          selectedItems.some((i) => i.itemId === content._id)
+                          isSelected
+                            ? "text-zinc-300"
+                            : isPending || isFailed
                             ? "text-zinc-300"
                             : "text-zinc-400 group-hover:text-zinc-900"
                         }`}
                       />
                     </div>
                   </div>
+                    );
+                  })()
                 ))}
               </div>
             )}
