@@ -1,0 +1,51 @@
+id: jsontomdindex
+namespace: main
+
+inputs:
+  - id: jsonct
+    type: STRING
+
+tasks:
+  - id: wdir
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+      - id: clonecode
+        type: io.kestra.plugin.git.Clone
+        url: "https://github.com/Ashutoshbind15/dev-iterate"
+
+      - id: jsontomd
+        type: io.kestra.plugin.scripts.python.Commands
+        dependencies:
+          - kestra
+        outputFiles:
+          - lesson.md
+        env:
+          DOC_JSON: "{{inputs.jsonct}}"
+        commands:
+          - python automation-scripts/contentjsontomd.py --from-env DOC_JSON --out lesson.md
+
+      - id: ingest
+        type: io.kestra.plugin.ai.rag.IngestDocument
+
+        provider:
+          type: io.kestra.plugin.ai.provider.OpenRouter
+          modelName: qwen/qwen3-embedding-4b
+          apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+        embeddings:
+          type: io.kestra.plugin.ai.embeddings.MongoDBAtlas
+          username: "{{ kv('MONGODB_ATLAS_USERNAME') }}"
+          password: "{{ kv('MONGODB_ATLAS_PASSWORD') }}"
+          host: "{{ kv('MONGODB_ATLAS_HOST') }}"
+          database: "{{ kv('MONGODB_ATLAS_DATABASE') }}"
+          collectionName: "{{ kv('MONGODB_ATLAS_COLLECTION_NAME') }}"
+          indexName: "{{ kv('MONGODB_ATLAS_VECTOR_INDEX_NAME') }}"
+          scheme: "mongodb+srv"
+          # type: io.kestra.plugin.ai.embeddings.KestraKVStore
+
+        documentSplitter:
+          maxOverlapSizeInChars: 256
+          maxSegmentSizeInChars: 2048
+          splitter: "RECURSIVE"
+
+        fromInternalURIs:
+          - "{{ outputs.jsontomd.outputFiles['lesson.md'] }}"

@@ -30,6 +30,7 @@ tasks:
       - Lists contain listItem nodes, which contain paragraph nodes
       - Empty paragraphs have no content array
       - Code blocks must have a language attribute
+      - The returned json output should be of the following format strictly: {"type": "doc", "content": [...content nodes]}
 
       Example for a JS tutoial:
 
@@ -546,6 +547,13 @@ tasks:
       - Practical tips or callouts in blockquotes
 
       Return the TipTap document JSON:
+
+  - id: index_lesson
+    type: io.kestra.plugin.core.flow.Subflow
+    flowId: jsontomdindex
+    namespace: main
+    inputs:
+      jsonct: "{{outputs.generate_lesson.jsonOutput}}"
 
   - id: save_content
     type: io.kestra.plugin.core.http.Request
