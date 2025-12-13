@@ -5,6 +5,11 @@ import { savePersonalizedQuestions } from "./httpactions/personalizedQuestions";
 import { saveLessonContent } from "./httpactions/lessonContent";
 import { saveTopics } from "./httpactions/topics";
 import { saveTopicResearchSummary } from "./httpactions/topicResearchSummary";
+import {
+  getTestCasesForJudge,
+  updateSubmissionResult,
+  markSubmissionRunning,
+} from "./httpactions/codingSubmissions";
 import { auth } from "./auth";
 
 const http = httpRouter();
@@ -43,6 +48,26 @@ http.route({
   path: "/topic-research-summary",
   method: "POST",
   handler: saveTopicResearchSummary,
+});
+
+// Coding submission judge integration routes
+// TODO: Add M2M auth token validation later
+http.route({
+  path: "/coding/testcases",
+  method: "POST",
+  handler: getTestCasesForJudge,
+});
+
+http.route({
+  path: "/coding/submission-result",
+  method: "POST",
+  handler: updateSubmissionResult,
+});
+
+http.route({
+  path: "/coding/submission-running",
+  method: "POST",
+  handler: markSubmissionRunning,
 });
 
 auth.addHttpRoutes(http);
