@@ -2,129 +2,608 @@ id: personalized_question_generator
 namespace: main
 
 tasks:
-  - id: generate_questions
+  # Step 1: Evaluate the learner's profile and generate a novelty score
+  - id: evaluate_learner
     type: io.kestra.plugin.ai.agent.AIAgent
     provider:
       type: io.kestra.plugin.ai.provider.OpenRouter
       apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
-      modelName: google/gemini-2.5-flash
+      modelName: openai/gpt-5.1
     systemMessage: |
-      You are a question generation assistant that returns ONLY valid JSON matching the schema.
-      Do not add explanations, markdown formatting, code blocks, or extra keys.
-      Generate exactly 10 personalized coding questions tailored to address the user's weaknesses and learning needs.
-      Mix question types appropriately (aim for 6-7 MCQ and 3-4 descriptive).
-      Vary difficulty levels based on the user's analysis.
-      Focus on topics mentioned in the analysis.
-      Ensure questions are practical and relevant to coding.
+      You are an educational analyst that evaluates learner profiles to determine personalized question needs.
 
-      Example MCQ question:
-      {
-        "title": "Understanding Closure Scope",
-        "type": "mcq",
-        "questionText": "What will be logged when this code executes? var x = 10; function test() { console.log(x); var x = 20; } test();",
-        "options": ["10", "20", "undefined", "ReferenceError"],
-        "answer": "undefined",
-        "difficulty": "medium",
-        "tags": ["javascript", "closures", "scope"]
-      }
+      Based on the learner's analysis/annotations, you must:
+      1. Determine a "novelty score" from 1 to 10 that indicates the need for more challenging or supportive content
+      2. Classify the learner into one of three categories
 
-      Example descriptive question:
-      {
-        "title": "Explaining Event Loop",
-        "type": "descriptive",
-        "questionText": "Explain how the JavaScript event loop handles asynchronous operations. Include examples of setTimeout and Promise execution order.",
-        "answer": "The event loop processes the call stack first, then checks the callback queue. setTimeout callbacks go to the callback queue, while Promise.then() callbacks go to the microtask queue which has higher priority. Microtasks are processed before callbacks.",
-        "difficulty": "hard",
-        "tags": ["javascript", "async", "event-loop"]
-      }
+      Novelty Score Guidelines:
+      - Score 1-3: Average performers who show consistent but unremarkable progress. Standard question set needed.
+      - Score 4-7: General learners with mixed performance. Moderate challenge needed.
+      - Score 8-10: Learners with exceptional profiles - either:
+        - Advanced learners showing mastery who need more challenging content, OR
+        - Learners showing significant gaps who need additional focused practice
+
+      Learner Category:
+      - "advanced": Learners demonstrating strong understanding, quick comprehension, and mastery of concepts
+      - "needs_support": Learners showing gaps, misconceptions, or struggling with foundational concepts
+      - "general": Learners with typical mixed performance, neither exceptional nor struggling
+
+      Analyze the annotations carefully to distinguish between advanced learners and those needing support.
+      Look for indicators like: correct/incorrect patterns, conceptual understanding depth, common mistakes, topic struggles.
     configuration:
       responseFormat:
         type: JSON
         jsonSchema:
-          type: array
-          minItems: 10
-          maxItems: 10
-          items:
-            oneOf:
-              - type: object
-                required:
-                  [
-                    "title",
-                    "type",
-                    "questionText",
-                    "options",
-                    "answer",
-                    "difficulty",
-                    "tags",
-                  ]
-                properties:
-                  title:
-                    type: string
-                  type:
-                    type: string
-                    enum: ["mcq"]
-                  questionText:
-                    type: string
-                  options:
-                    type: array
-                    minItems: 2
-                    items:
-                      type: string
-                  answer:
-                    type: string
-                  difficulty:
-                    type: string
-                    enum: ["easy", "medium", "hard"]
-                  tags:
-                    type: array
-                    items:
-                      type: string
-              - type: object
-                required:
-                  [
-                    "title",
-                    "type",
-                    "questionText",
-                    "answer",
-                    "difficulty",
-                    "tags",
-                  ]
-                properties:
-                  title:
-                    type: string
-                  type:
-                    type: string
-                    enum: ["descriptive"]
-                  questionText:
-                    type: string
-                  answer:
-                    type: string
-                  difficulty:
-                    type: string
-                    enum: ["easy", "medium", "hard"]
-                  tags:
-                    type: array
-                    items:
-                      type: string
+          type: object
+          required: ["noveltyScore", "learnerCategory", "reasoning"]
+          properties:
+            noveltyScore:
+              type: integer
+              minimum: 1
+              maximum: 10
+            learnerCategory:
+              type: string
+              enum: ["advanced", "needs_support", "general"]
+            reasoning:
+              type: string
+              description: "Brief explanation of why this score and category were assigned"
     prompt: |
-      Given a comma-separated analysis of a user's learning profile, generate 10 personalized coding questions.
+      Analyze the following learner annotations and determine their novelty score and category:
 
-      USER ANALYSIS:
+      LEARNER ANNOTATIONS:
       {{ trigger.body.analysis }}
 
-      Return the JSON array of exactly 10 question objects:
+      Provide your analysis with novelty score (1-10), learner category, and brief reasoning.
 
-  - id: save_questions
-    type: io.kestra.plugin.core.http.Request
-    uri: "{{ secret('ACTIONS_BASE_URL') }}/personalized-questions"
-    method: POST
-    headers:
-      Content-Type: application/json
-    body: |
-      {
-        "submissionId": "{{ trigger.body.submissionId }}",
-        "questions": {{ outputs.generate_questions["jsonOutput"]["questions"] }}
-      }
+  # Step 2: Branch based on novelty score for different question counts and styles
+  - id: check_high_novelty
+    type: io.kestra.plugin.core.flow.If
+    condition: "{{ outputs.evaluate_learner['jsonOutput']['noveltyScore'] >= 8 }}"
+    then:
+      # High novelty: 10 questions - check if advanced or needs support
+      - id: check_advanced_learner
+        type: io.kestra.plugin.core.flow.If
+        condition: "{{ outputs.evaluate_learner['jsonOutput']['learnerCategory'] == 'advanced' }}"
+        then:
+          # Advanced learner: challenging questions
+          - id: generate_advanced_questions
+            type: io.kestra.plugin.ai.agent.AIAgent
+            provider:
+              type: io.kestra.plugin.ai.provider.OpenRouter
+              apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+              modelName: openai/gpt-5.1
+            systemMessage: |
+              You are a question generation assistant for ADVANCED LEARNERS.
+              Return ONLY valid JSON matching the schema. No explanations, markdown, or extra keys.
+
+              Generate exactly 10 personalized coding questions for a learner who has demonstrated strong understanding.
+
+              Guidelines for advanced learners:
+              - Focus on higher-order thinking and application
+              - Include edge cases and nuanced scenarios
+              - Add questions that combine multiple concepts
+              - Prefer medium to hard difficulty (8 medium, 2 hard minimum)
+              - Include challenging problem-solving scenarios
+              - Mix: 5-6 MCQ and 4-5 descriptive questions
+
+              Example MCQ question:
+              {
+                "title": "Advanced Closure Behavior",
+                "type": "mcq",
+                "questionText": "Consider this code: const funcs = []; for (let i = 0; i < 3; i++) { funcs.push(() => i); } What does funcs.map(f => f()).join(',') return?",
+                "options": ["0,1,2", "3,3,3", "0,0,0", "undefined,undefined,undefined"],
+                "answer": "0,1,2",
+                "difficulty": "hard",
+                "tags": ["javascript", "closures", "let-vs-var"]
+              }
+
+              Example descriptive question:
+              {
+                "title": "Optimizing Event Loop Performance",
+                "type": "descriptive",
+                "questionText": "Explain how you would optimize a Node.js application that's experiencing event loop blocking. Discuss microtasks, setImmediate vs process.nextTick, and worker threads.",
+                "answer": "To optimize event loop performance: 1) Break CPU-intensive tasks into smaller chunks using setImmediate to yield to the event loop. 2) Use process.nextTick for callbacks that must run before I/O, but sparingly as it can starve I/O. 3) Move heavy computations to worker threads. 4) Use async/await properly to avoid blocking. 5) Monitor event loop lag and identify bottlenecks.",
+                "difficulty": "hard",
+                "tags": ["nodejs", "performance", "event-loop", "optimization"]
+              }
+            configuration:
+              responseFormat:
+                type: JSON
+                jsonSchema:
+                  type: array
+                  minItems: 10
+                  maxItems: 10
+                  items:
+                    oneOf:
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "options",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["mcq"]
+                          questionText:
+                            type: string
+                          options:
+                            type: array
+                            minItems: 2
+                            items:
+                              type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["descriptive"]
+                          questionText:
+                            type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+            prompt: |
+              Generate 10 challenging personalized questions for an ADVANCED LEARNER.
+
+              LEARNER ANALYSIS:
+              {{ trigger.body.analysis }}
+
+              EVALUATION REASONING:
+              {{ outputs.evaluate_learner['jsonOutput']['reasoning'] }}
+
+              Focus on topics the learner has shown strength in, but increase complexity and add nuance.
+              Return the JSON array of exactly 10 question objects.
+
+          - id: save_advanced_questions
+            type: io.kestra.plugin.core.http.Request
+            uri: "{{ secret('ACTIONS_BASE_URL') }}/personalized-questions"
+            method: POST
+            headers:
+              Content-Type: application/json
+            body: |
+              {
+                "submissionId": "{{ trigger.body.submissionId }}",
+                "questions": {{ outputs.generate_advanced_questions['jsonOutput']['questions'] }}
+              }
+
+        else:
+          # Needs support: foundational reinforcement questions
+          - id: generate_support_questions
+            type: io.kestra.plugin.ai.agent.AIAgent
+            provider:
+              type: io.kestra.plugin.ai.provider.OpenRouter
+              apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+              modelName: openai/gpt-5.1
+            systemMessage: |
+              You are a question generation assistant for LEARNERS WHO NEED ADDITIONAL PRACTICE.
+              Return ONLY valid JSON matching the schema. No explanations, markdown, or extra keys.
+
+              Generate exactly 10 personalized coding questions for a learner who needs foundational reinforcement.
+
+              Guidelines for supportive learning:
+              - Focus on reinforcing core concepts identified as weak areas
+              - Break down complex topics into simpler components
+              - Provide clear, straightforward scenarios
+              - Prefer easy to medium difficulty (6 easy, 4 medium)
+              - Include questions that build confidence while addressing gaps
+              - Mix: 7 MCQ (clear feedback) and 3 descriptive questions
+
+              Example MCQ question:
+              {
+                "title": "Basic Variable Scope",
+                "type": "mcq",
+                "questionText": "What will console.log(x) output? var x = 5; function test() { var x = 10; } test(); console.log(x);",
+                "options": ["5", "10", "undefined", "Error"],
+                "answer": "5",
+                "difficulty": "easy",
+                "tags": ["javascript", "variables", "scope"]
+              }
+
+              Example descriptive question:
+              {
+                "title": "Explaining Variables",
+                "type": "descriptive",
+                "questionText": "Explain the difference between let, const, and var in JavaScript. When would you use each one?",
+                "answer": "var is function-scoped and can be redeclared. let is block-scoped and can be reassigned but not redeclared. const is block-scoped and cannot be reassigned or redeclared. Use const by default, let when you need to reassign, and avoid var in modern code.",
+                "difficulty": "easy",
+                "tags": ["javascript", "variables", "fundamentals"]
+              }
+            configuration:
+              responseFormat:
+                type: JSON
+                jsonSchema:
+                  type: array
+                  minItems: 10
+                  maxItems: 10
+                  items:
+                    oneOf:
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "options",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["mcq"]
+                          questionText:
+                            type: string
+                          options:
+                            type: array
+                            minItems: 2
+                            items:
+                              type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["descriptive"]
+                          questionText:
+                            type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+            prompt: |
+              Generate 10 supportive personalized questions for a LEARNER NEEDING ADDITIONAL PRACTICE.
+
+              LEARNER ANALYSIS:
+              {{ trigger.body.analysis }}
+
+              EVALUATION REASONING:
+              {{ outputs.evaluate_learner['jsonOutput']['reasoning'] }}
+
+              Focus on the weak areas identified. Provide clear, confidence-building questions that reinforce fundamentals.
+              Return the JSON array of exactly 10 question objects.
+
+          - id: save_support_questions
+            type: io.kestra.plugin.core.http.Request
+            uri: "{{ secret('ACTIONS_BASE_URL') }}/personalized-questions"
+            method: POST
+            headers:
+              Content-Type: application/json
+            body: |
+              {
+                "submissionId": "{{ trigger.body.submissionId }}",
+                "questions": {{ outputs.generate_support_questions['jsonOutput']['questions'] }}
+              }
+
+    else:
+      # Not high novelty - check if moderate or low
+      - id: check_moderate_novelty
+        type: io.kestra.plugin.core.flow.If
+        condition: "{{ outputs.evaluate_learner['jsonOutput']['noveltyScore'] > 3 }}"
+        then:
+          # Moderate novelty (4-7): 7 questions for general learners
+          - id: generate_general_questions
+            type: io.kestra.plugin.ai.agent.AIAgent
+            provider:
+              type: io.kestra.plugin.ai.provider.OpenRouter
+              apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+              modelName: openai/gpt-5.1
+            systemMessage: |
+              You are a question generation assistant for GENERAL LEARNERS.
+              Return ONLY valid JSON matching the schema. No explanations, markdown, or extra keys.
+
+              Generate exactly 7 personalized coding questions for a learner with typical mixed performance.
+
+              Guidelines for general learners:
+              - Balanced mix of difficulty levels (2 easy, 4 medium, 1 hard)
+              - Address topics from the analysis with varied approaches
+              - Include both concept review and application questions
+              - Mix: 4-5 MCQ and 2-3 descriptive questions
+
+              Example MCQ question:
+              {
+                "title": "Understanding Closure Scope",
+                "type": "mcq",
+                "questionText": "What will be logged when this code executes? var x = 10; function test() { console.log(x); var x = 20; } test();",
+                "options": ["10", "20", "undefined", "ReferenceError"],
+                "answer": "undefined",
+                "difficulty": "medium",
+                "tags": ["javascript", "closures", "scope"]
+              }
+
+              Example descriptive question:
+              {
+                "title": "Explaining Event Loop",
+                "type": "descriptive",
+                "questionText": "Explain how the JavaScript event loop handles asynchronous operations. Include examples of setTimeout and Promise execution order.",
+                "answer": "The event loop processes the call stack first, then checks the callback queue. setTimeout callbacks go to the callback queue, while Promise.then() callbacks go to the microtask queue which has higher priority. Microtasks are processed before callbacks.",
+                "difficulty": "medium",
+                "tags": ["javascript", "async", "event-loop"]
+              }
+            configuration:
+              responseFormat:
+                type: JSON
+                jsonSchema:
+                  type: array
+                  minItems: 7
+                  maxItems: 7
+                  items:
+                    oneOf:
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "options",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["mcq"]
+                          questionText:
+                            type: string
+                          options:
+                            type: array
+                            minItems: 2
+                            items:
+                              type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["descriptive"]
+                          questionText:
+                            type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+            prompt: |
+              Generate 7 balanced personalized questions for a GENERAL LEARNER.
+
+              LEARNER ANALYSIS:
+              {{ trigger.body.analysis }}
+
+              EVALUATION REASONING:
+              {{ outputs.evaluate_learner['jsonOutput']['reasoning'] }}
+
+              Provide a balanced set addressing the topics mentioned in the analysis.
+              Return the JSON array of exactly 7 question objects.
+
+          - id: save_general_questions
+            type: io.kestra.plugin.core.http.Request
+            uri: "{{ secret('ACTIONS_BASE_URL') }}/personalized-questions"
+            method: POST
+            headers:
+              Content-Type: application/json
+            body: |
+              {
+                "submissionId": "{{ trigger.body.submissionId }}",
+                "questions": {{ outputs.generate_general_questions['jsonOutput']['questions'] }}
+              }
+
+        else:
+          # Low novelty (1-3): 4 questions for average performers
+          - id: generate_standard_questions
+            type: io.kestra.plugin.ai.agent.AIAgent
+            provider:
+              type: io.kestra.plugin.ai.provider.OpenRouter
+              apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+              modelName: openai/gpt-5.1
+            systemMessage: |
+              You are a question generation assistant for CONSISTENT LEARNERS.
+              Return ONLY valid JSON matching the schema. No explanations, markdown, or extra keys.
+
+              Generate exactly 4 personalized coding questions for a learner showing consistent, steady progress.
+
+              Guidelines for consistent learners:
+              - Focus on maintaining engagement and steady progression
+              - Balance of easy and medium difficulty (2 easy, 2 medium)
+              - Brief, focused questions on relevant topics
+              - Mix: 2-3 MCQ and 1-2 descriptive questions
+
+              Example MCQ question:
+              {
+                "title": "Array Method Usage",
+                "type": "mcq",
+                "questionText": "Which array method returns a new array with all elements that pass a test?",
+                "options": ["map()", "filter()", "reduce()", "forEach()"],
+                "answer": "filter()",
+                "difficulty": "easy",
+                "tags": ["javascript", "arrays", "methods"]
+              }
+
+              Example descriptive question:
+              {
+                "title": "Map vs ForEach",
+                "type": "descriptive",
+                "questionText": "What is the main difference between map() and forEach() in JavaScript?",
+                "answer": "map() returns a new array with the results of calling a function on every element, while forEach() executes a function on each element but returns undefined. Use map() when you need a transformed array, forEach() for side effects only.",
+                "difficulty": "easy",
+                "tags": ["javascript", "arrays", "methods"]
+              }
+            configuration:
+              responseFormat:
+                type: JSON
+                jsonSchema:
+                  type: array
+                  minItems: 4
+                  maxItems: 4
+                  items:
+                    oneOf:
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "options",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["mcq"]
+                          questionText:
+                            type: string
+                          options:
+                            type: array
+                            minItems: 2
+                            items:
+                              type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+                      - type: object
+                        required:
+                          [
+                            "title",
+                            "type",
+                            "questionText",
+                            "answer",
+                            "difficulty",
+                            "tags",
+                          ]
+                        properties:
+                          title:
+                            type: string
+                          type:
+                            type: string
+                            enum: ["descriptive"]
+                          questionText:
+                            type: string
+                          answer:
+                            type: string
+                          difficulty:
+                            type: string
+                            enum: ["easy", "medium", "hard"]
+                          tags:
+                            type: array
+                            items:
+                              type: string
+            prompt: |
+              Generate 4 focused personalized questions for a CONSISTENT LEARNER.
+
+              LEARNER ANALYSIS:
+              {{ trigger.body.analysis }}
+
+              EVALUATION REASONING:
+              {{ outputs.evaluate_learner['jsonOutput']['reasoning'] }}
+
+              Provide a concise, focused set to maintain steady progress.
+              Return the JSON array of exactly 4 question objects.
+
+          - id: save_standard_questions
+            type: io.kestra.plugin.core.http.Request
+            uri: "{{ secret('ACTIONS_BASE_URL') }}/personalized-questions"
+            method: POST
+            headers:
+              Content-Type: application/json
+            body: |
+              {
+                "submissionId": "{{ trigger.body.submissionId }}",
+                "questions": {{ outputs.generate_standard_questions['jsonOutput']['questions'] }}
+              }
 
 triggers:
   - id: webhook
