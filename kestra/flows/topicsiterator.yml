@@ -1,0 +1,20 @@
+id: topicsiterator
+namespace: main
+
+tasks:
+  - id: looper
+    type: io.kestra.plugin.core.flow.ForEach
+    values: "{{trigger.body['topics']}}"
+    tasks:
+      - id: sendforprocessing
+        type: io.kestra.plugin.core.flow.Subflow
+        flowId: websearch_summarizer
+        namespace: main
+        inputs:
+          query: "{{taskrun.value | jq('.topic') | first }}"
+          topicId: "{{taskrun.value | jq('.topicId') | first}}"
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"

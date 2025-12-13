@@ -1,0 +1,62 @@
+id: websearch_summarizer
+namespace: main
+
+inputs:
+  - id: query
+    type: STRING
+    displayName: Select Your Orchestration query
+    defaults: Current workflow orchestration tools comparison
+
+  - id: topicId
+    type: STRING
+
+tasks:
+  - id: agent
+    type: io.kestra.plugin.ai.agent.AIAgent
+    systemMessage: "Given a query, a search tool, and a writer tool, generate a good final 200 word summary"
+    maxSequentialToolsInvocations: 5
+
+    prompt: |
+      User query: {{inputs.query}}
+
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: "anthropic/claude-sonnet-4.5"
+
+    tools:
+      - type: io.kestra.plugin.ai.tool.AIAgent
+        name: writer
+        provider:
+          type: io.kestra.plugin.ai.provider.OpenRouter
+          apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+          modelName: "anthropic/claude-haiku-4.5"
+        description: Writer agent to get a new summary
+        systemMessage: You are an amazing writing specialist, who is really concise and well expressive, You take some text and articulate it v well to 200 words.
+
+      - type: io.kestra.plugin.ai.tool.TavilyWebSearch
+        apiKey: "{{kv('TAV_API_KEY')}}"
+
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["summary"]
+          additionalProperties: false
+          properties:
+            summary:
+              type: string
+              description: "The final summary"
+
+  - id: sendResults
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/topic-research-summary"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topicId": "{{ inputs.topicId }}",
+        "summary": "{{ outputs.agent["jsonOutput"]["summary"] }}"
+      }

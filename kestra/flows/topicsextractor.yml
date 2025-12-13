@@ -1,0 +1,89 @@
+id: topicsextractor
+namespace: main
+
+tasks:
+  - id: fetch_top_titles
+    type: io.kestra.plugin.scripts.node.Script
+    beforeCommands:
+      - npm i @kestra-io/libs
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+    containerImage: node:slim
+    script: |
+      const Kestra = require("@kestra-io/libs");
+
+      const HN_BASE = "https://hacker-news.firebaseio.com/v0";
+
+      async function fetchJson(url) {
+        const res = await fetch(url, { headers: { Accept: "application/json" } });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} for ${url}`);
+        }
+        return res.json();
+      }
+
+      async function main() {
+        const topIds = await fetchJson(`${HN_BASE}/topstories.json`);
+        const ids = (Array.isArray(topIds) ? topIds : []).slice(0, 10);
+
+        const items = await Promise.all(
+          ids.map((id) => fetchJson(`${HN_BASE}/item/${id}.json`))
+        );
+
+        const titles = items
+          .map((item) => item?.title)
+          .filter((t) => typeof t === "string" && t.trim().length > 0)
+          .slice(0, 10);
+
+        Kestra.outputs({ titles_json: titles });
+      }
+
+      main().catch((err) => {
+        console.error(err?.stack || String(err));
+        process.exitCode = 1;
+      });
+
+  - id: generate_topics
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: google/gemini-2.5-flash
+    systemMessage: |
+      You are given 10 Hacker News story titles.
+      Suggest 2-4 interesting high-level topics that capture the trends.
+      Return ONLY valid JSON matching the schema.
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["topics"]
+          additionalProperties: false
+          properties:
+            topics:
+              type: array
+              minItems: 2
+              maxItems: 4
+              items:
+                type: string
+                description: "A short topic label (2-6 words)"
+    prompt: |
+      TITLES (JSON array of strings):
+      {{ outputs.fetch_top_titles["vars"]["titles_json"] }}
+
+  - id: sendResults
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/topics"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topics": {{ outputs.generate_topics["jsonOutput"]["topics"] }}
+      }
+
+# triggers:
+#   - id: daily
+#     type: io.kestra.plugin.core.trigger.Schedule
+#     cron: "*/50 * * * *"

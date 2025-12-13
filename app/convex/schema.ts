@@ -60,6 +60,27 @@ export default defineSchema({
     summaryText: v.string(),
   }),
 
+  // System/user generated topics (e.g. daily trends)
+  topics: defineTable({
+    name: v.string(),
+    generatedBy: v.string(), // currently "system"
+    generatedByUser: v.optional(v.id("users")), // optional owner (if user-generated)
+  })
+    .index("by_name", ["name"])
+    .index("by_generatedBy_and_name", ["generatedBy", "name"]),
+
+  // Summaries keyed by topic and kind (webresearch today; future: rss/rag/etc.)
+  topicSummaries: defineTable({
+    topicId: v.id("topics"),
+    kind: v.string(), // e.g. "webresearch", "rss", "rag"
+    summaryText: v.string(),
+    generatedBy: v.string(), // currently "system"
+    generatedByUser: v.optional(v.id("users")),
+    updatedAt: v.number(),
+  })
+    .index("by_topicId", ["topicId"])
+    .index("by_topicId_and_kind", ["topicId", "kind"]),
+
   // Questions (MCQ or descriptive)
   questions: defineTable({
     title: v.string(),
