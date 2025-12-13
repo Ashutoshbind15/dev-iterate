@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actionsdir_codeExecution from "../actionsdir/codeExecution.js";
 import type * as actionsdir_contentSubmission from "../actionsdir/contentSubmission.js";
 import type * as actionsdir_diagramGeneration from "../actionsdir/diagramGeneration.js";
 import type * as actionsdir_lessonContent from "../actionsdir/lessonContent.js";
@@ -17,6 +18,7 @@ import type * as actionsdir_topics from "../actionsdir/topics.js";
 import type * as actionsdir_weakness from "../actionsdir/weakness.js";
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
+import type * as httpactions_codingSubmissions from "../httpactions/codingSubmissions.js";
 import type * as httpactions_feed from "../httpactions/feed.js";
 import type * as httpactions_lessonContent from "../httpactions/lessonContent.js";
 import type * as httpactions_personalizedQuestions from "../httpactions/personalizedQuestions.js";
@@ -31,6 +33,7 @@ import type * as mutations_lessons from "../mutations/lessons.js";
 import type * as mutations_personalizedQuestions from "../mutations/personalizedQuestions.js";
 import type * as mutations_questions from "../mutations/questions.js";
 import type * as mutations_rssSummaries from "../mutations/rssSummaries.js";
+import type * as mutations_seed from "../mutations/seed.js";
 import type * as mutations_topicSummaries from "../mutations/topicSummaries.js";
 import type * as mutations_topics from "../mutations/topics.js";
 import type * as mutations_userWeakness from "../mutations/userWeakness.js";
@@ -50,6 +53,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actionsdir/codeExecution": typeof actionsdir_codeExecution;
   "actionsdir/contentSubmission": typeof actionsdir_contentSubmission;
   "actionsdir/diagramGeneration": typeof actionsdir_diagramGeneration;
   "actionsdir/lessonContent": typeof actionsdir_lessonContent;
@@ -59,6 +63,7 @@ declare const fullApi: ApiFromModules<{
   "actionsdir/weakness": typeof actionsdir_weakness;
   auth: typeof auth;
   http: typeof http;
+  "httpactions/codingSubmissions": typeof httpactions_codingSubmissions;
   "httpactions/feed": typeof httpactions_feed;
   "httpactions/lessonContent": typeof httpactions_lessonContent;
   "httpactions/personalizedQuestions": typeof httpactions_personalizedQuestions;
@@ -73,6 +78,7 @@ declare const fullApi: ApiFromModules<{
   "mutations/personalizedQuestions": typeof mutations_personalizedQuestions;
   "mutations/questions": typeof mutations_questions;
   "mutations/rssSummaries": typeof mutations_rssSummaries;
+  "mutations/seed": typeof mutations_seed;
   "mutations/topicSummaries": typeof mutations_topicSummaries;
   "mutations/topics": typeof mutations_topics;
   "mutations/userWeakness": typeof mutations_userWeakness;

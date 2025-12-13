@@ -18,6 +18,8 @@ import LeaderboardPage from "@/pages/leaderboard";
 import PersonalizedQuestionsViewPage from "@/pages/personalized-questions-view";
 import PersonalizedQuestionViewPage from "@/pages/personalized-question-view";
 import PersonalizedQuestionSetViewPage from "@/pages/personalized-question-set-view";
+import CodingSolvePage from "@/pages/coding-solve";
+import CodingQuestionsPage from "@/pages/coding-questions";
 
 const RouteComp = () => {
   return (
@@ -34,6 +36,9 @@ const RouteComp = () => {
         <Route path="/lessons" element={<LessonsPage />} />
         <Route path="/lessons/:id" element={<LessonViewPage />} />
 
+        {/* Coding problems - public to browse */}
+        <Route path="/coding" element={<CodingQuestionsPage />} />
+
         <Route element={<AuthedWrapper />}>
           {/* Creator routes */}
           <Route path="/create/content" element={<CreateContentPage />} />
@@ -43,6 +48,11 @@ const RouteComp = () => {
           <Route path="/manage/lessons" element={<ManageLessonsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/contribute" element={<ContributeQuestionPage />} />
+          {/* Coding questions solve route */}
+          <Route
+            path="/coding/:questionId/solve"
+            element={<CodingSolvePage />}
+          />
           <Route
             path="/personalized-questions"
             element={<PersonalizedQuestionsViewPage />}

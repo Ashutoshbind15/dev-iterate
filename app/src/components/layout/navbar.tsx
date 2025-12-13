@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router";
-import { BookOpen, Layers, User, HelpCircle, Sparkles } from "lucide-react";
+import { BookOpen, Layers, User, HelpCircle, Sparkles, Code2 } from "lucide-react";
 import {
   Authenticated,
   AuthLoading,
@@ -131,6 +131,30 @@ const Navbar = () => {
                       </NavigationMenuLink>
                     </li>
                   </Authenticated>
+                </ul>
+              </NavigationMenuContent>
+            </NavigationMenuItem>
+
+            {/* Coding */}
+            <NavigationMenuItem>
+              <NavigationMenuTrigger className="rounded-sm">
+                <span className="inline-flex items-center gap-2">
+                  <Code2 className="h-4 w-4" />
+                  Coding
+                </span>
+              </NavigationMenuTrigger>
+              <NavigationMenuContent>
+                <ul className="grid gap-1 w-[320px]">
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link to="/coding" data-active={isActive("/coding")}>
+                        <span className="font-medium">Problems</span>
+                        <span className="text-muted-foreground text-xs">
+                          Browse coding challenges
+                        </span>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
                 </ul>
               </NavigationMenuContent>
             </NavigationMenuItem>

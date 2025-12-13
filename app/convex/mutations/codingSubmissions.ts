@@ -2,10 +2,13 @@ import { mutation, internalMutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
+import { internal } from "../_generated/api";
 
 /**
  * Create a new coding submission.
- * Sets status to "queued" - actual execution happens via external judge (see plan 4).
+ * Creates a submission with "queued" status and schedules the code execution action.
+ * The action will call the code-exec server which will update the submission status
+ * via HTTP callback. Client can subscribe to the submission for real-time updates.
  */
 export const createCodingSubmission = mutation({
   args: {
@@ -44,6 +47,20 @@ export const createCodingSubmission = mutation({
       sourceCode: args.sourceCode,
       status: "queued" as const,
     });
+
+    // Schedule the code execution action
+    // This runs asynchronously - the code-exec server will update the submission
+    // status via HTTP callback when done
+    await ctx.scheduler.runAfter(
+      0, // Run immediately
+      internal.actionsdir.codeExecution.triggerCodeExecution,
+      {
+        submissionId,
+        questionId: args.questionId,
+        languageId: args.languageId,
+        sourceCode: args.sourceCode,
+      }
+    );
 
     return submissionId;
   },
