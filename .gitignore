@@ -1,3 +1,6 @@
+# Local Judge0 extracted release archive (large + contains secrets in judge0.conf)
+code-execution/.judge0/
+
 node_modules
 .env
 .env.local
