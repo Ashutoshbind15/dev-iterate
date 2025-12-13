@@ -8,6 +8,7 @@ export const saveTopicResearchSummary = httpAction(async (ctx, req) => {
 
   const topicId = body?.topicId;
   const summary = body?.summary;
+  const kindRaw = body?.kind;
 
   if (!topicId || typeof topicId !== "string") {
     return new Response(
@@ -29,11 +30,16 @@ export const saveTopicResearchSummary = httpAction(async (ctx, req) => {
     );
   }
 
+  const kind =
+    typeof kindRaw === "string" && kindRaw.trim().length > 0
+      ? kindRaw.trim()
+      : "webresearch";
+
   const summaryId = await ctx.runMutation(
     internal.mutations.topicSummaries.upsertTopicSummary,
     {
       topicId: topicId as Id<"topics">,
-      kind: "webresearch",
+      kind,
       summaryText: summary,
       generatedBy: "system",
     }

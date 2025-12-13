@@ -14,6 +14,14 @@ tasks:
           query: "{{taskrun.value | jq('.topic') | first }}"
           topicId: "{{taskrun.value | jq('.topicId') | first}}"
 
+      - id: sendforragrundown
+        type: io.kestra.plugin.core.flow.Subflow
+        flowId: topic_rag_summarizer
+        namespace: main
+        inputs:
+          query: "{{taskrun.value | jq('.topic') | first }}"
+          topicId: "{{taskrun.value | jq('.topicId') | first}}"
+
 triggers:
   - id: webhook
     type: io.kestra.plugin.core.trigger.Webhook

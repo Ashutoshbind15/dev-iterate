@@ -1,0 +1,79 @@
+id: topic_rag_summarizer
+namespace: main
+
+inputs:
+  - id: query
+    type: STRING
+    description: The user query / topic to run RAG on
+  - id: topicId
+    type: STRING
+
+variables:
+  chatModel: "moonshotai/kimi-k2-0905"
+  embeddingModel: "qwen/qwen3-embedding-4b"
+
+tasks:
+  - id: rag
+    type: io.kestra.plugin.ai.rag.ChatCompletion
+
+    chatProvider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      modelName: "{{vars.chatModel}}"
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+
+    embeddingProvider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      modelName: "{{vars.embeddingModel}}"
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+
+    embeddings:
+      type: io.kestra.plugin.ai.embeddings.MongoDBAtlas
+      username: "{{ kv('MONGODB_ATLAS_USERNAME') }}"
+      password: "{{ kv('MONGODB_ATLAS_PASSWORD') }}"
+      host: "{{ kv('MONGODB_ATLAS_HOST') }}"
+      database: "{{ kv('MONGODB_ATLAS_DATABASE') }}"
+      collectionName: "{{ kv('MONGODB_ATLAS_COLLECTION_NAME') }}"
+      indexName: "{{ kv('MONGODB_ATLAS_VECTOR_INDEX_NAME') }}"
+      scheme: "mongodb+srv"
+
+    prompt: "{{inputs.query}}"
+
+  - id: summarize
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: "anthropic/claude-haiku-4.5"
+    systemMessage: |
+      You take the output of a RAG chat completion and produce a concise, high-signal summary.
+      Return ONLY valid JSON matching the schema.
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["summary"]
+          additionalProperties: false
+          properties:
+            summary:
+              type: string
+              description: "A concise summary string"
+    prompt: |
+      Summarize the following answer for the topic "{{ inputs.query }}":
+
+      {{ outputs.rag }}
+
+  - id: sendResults
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/topic-research-summary"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topicId": "{{ inputs.topicId }}",
+        "kind": "rag",
+        "summary": "{{ outputs.summarize['jsonOutput']['summary'] }}"
+      }
+
+
