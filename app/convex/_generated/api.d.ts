@@ -23,6 +23,8 @@ import type * as httpactions_personalizedQuestions from "../httpactions/personal
 import type * as httpactions_topicResearchSummary from "../httpactions/topicResearchSummary.js";
 import type * as httpactions_topics from "../httpactions/topics.js";
 import type * as httpactions_userWeakness from "../httpactions/userWeakness.js";
+import type * as mutations_codingQuestions from "../mutations/codingQuestions.js";
+import type * as mutations_codingSubmissions from "../mutations/codingSubmissions.js";
 import type * as mutations_contents from "../mutations/contents.js";
 import type * as mutations_diagrams from "../mutations/diagrams.js";
 import type * as mutations_lessons from "../mutations/lessons.js";
@@ -32,6 +34,8 @@ import type * as mutations_rssSummaries from "../mutations/rssSummaries.js";
 import type * as mutations_topicSummaries from "../mutations/topicSummaries.js";
 import type * as mutations_topics from "../mutations/topics.js";
 import type * as mutations_userWeakness from "../mutations/userWeakness.js";
+import type * as queries_codingQuestions from "../queries/codingQuestions.js";
+import type * as queries_codingSubmissions from "../queries/codingSubmissions.js";
 import type * as queries_contents from "../queries/contents.js";
 import type * as queries_diagrams from "../queries/diagrams.js";
 import type * as queries_lessons from "../queries/lessons.js";
@@ -61,6 +65,8 @@ declare const fullApi: ApiFromModules<{
   "httpactions/topicResearchSummary": typeof httpactions_topicResearchSummary;
   "httpactions/topics": typeof httpactions_topics;
   "httpactions/userWeakness": typeof httpactions_userWeakness;
+  "mutations/codingQuestions": typeof mutations_codingQuestions;
+  "mutations/codingSubmissions": typeof mutations_codingSubmissions;
   "mutations/contents": typeof mutations_contents;
   "mutations/diagrams": typeof mutations_diagrams;
   "mutations/lessons": typeof mutations_lessons;
@@ -70,6 +76,8 @@ declare const fullApi: ApiFromModules<{
   "mutations/topicSummaries": typeof mutations_topicSummaries;
   "mutations/topics": typeof mutations_topics;
   "mutations/userWeakness": typeof mutations_userWeakness;
+  "queries/codingQuestions": typeof queries_codingQuestions;
+  "queries/codingSubmissions": typeof queries_codingSubmissions;
   "queries/contents": typeof queries_contents;
   "queries/diagrams": typeof queries_diagrams;
   "queries/lessons": typeof queries_lessons;

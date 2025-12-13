@@ -19,7 +19,7 @@ export const Judge0Status = {
 } as const;
 
 // Terminal statuses (no longer processing)
-export const TERMINAL_STATUS_IDS = new Set([
+export const TERMINAL_STATUS_IDS: Set<number> = new Set([
   Judge0Status.ACCEPTED,
   Judge0Status.WRONG_ANSWER,
   Judge0Status.TIME_LIMIT_EXCEEDED,

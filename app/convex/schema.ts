@@ -103,6 +103,94 @@ export default defineSchema({
     .index("by_upvotes", ["upvotes"])
     .index("by_difficulty", ["difficulty"]),
 
+  // ============================================================
+  // CODING QUESTIONS (separate/experimental feature)
+  // ============================================================
+
+  // Coding questions - Codeforces/LeetCode style problems
+  codingQuestions: defineTable({
+    title: v.string(),
+    promptRichText: v.string(), // JSON stringified TipTap/rich-text content for problem statement
+    authorId: v.id("users"),
+    difficulty: v.union(
+      v.literal("easy"),
+      v.literal("medium"),
+      v.literal("hard")
+    ),
+    tags: v.array(v.string()),
+    upvotes: v.number(),
+    downvotes: v.number(),
+    // Allowed Judge0 language IDs (e.g., 71 for Python 3, 63 for JavaScript)
+    languageIdsAllowed: v.array(v.number()),
+    // Default language ID to show in editor
+    defaultLanguageId: v.number(),
+    // Time limit per testcase in seconds
+    timeLimitSeconds: v.number(),
+    // Memory limit in MB
+    memoryLimitMb: v.number(),
+    // Output comparison settings
+    outputComparison: v.object({
+      trimOutputs: v.boolean(),
+      normalizeWhitespace: v.boolean(),
+      caseSensitive: v.boolean(),
+    }),
+    // Starter code per language (key: languageId as string, value: code)
+    starterCode: v.optional(v.record(v.string(), v.string())),
+  })
+    .index("by_author", ["authorId"])
+    .index("by_upvotes", ["upvotes"])
+    .index("by_difficulty", ["difficulty"]),
+
+  // Testcases for coding questions
+  codingTestCases: defineTable({
+    questionId: v.id("codingQuestions"),
+    visibility: v.union(v.literal("public"), v.literal("hidden")),
+    stdin: v.string(),
+    expectedStdout: v.string(),
+    name: v.optional(v.string()), // Optional descriptive name
+    order: v.number(), // For deterministic ordering
+  })
+    .index("by_questionId", ["questionId"])
+    .index("by_questionId_and_visibility", ["questionId", "visibility"])
+    .index("by_questionId_and_order", ["questionId", "order"]),
+
+  // Submissions for coding questions
+  codingSubmissions: defineTable({
+    questionId: v.id("codingQuestions"),
+    userId: v.id("users"),
+    languageId: v.number(), // Judge0 language ID
+    sourceCode: v.string(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("running"),
+      v.literal("passed"),
+      v.literal("failed"),
+      v.literal("error")
+    ),
+    // Results summary
+    passedCount: v.optional(v.number()),
+    totalCount: v.optional(v.number()),
+    firstFailureIndex: v.optional(v.number()), // Index of first failing testcase (if any)
+    // First failure details (redacted - don't expose hidden testcase expected output)
+    firstFailure: v.optional(
+      v.object({
+        stdin: v.optional(v.string()), // Only shown for public testcases
+        actualOutput: v.optional(v.string()),
+        expectedOutput: v.optional(v.string()), // Only shown for public testcases
+        errorMessage: v.optional(v.string()),
+      })
+    ),
+    // Optional execution outputs (useful for debugging)
+    stdout: v.optional(v.string()),
+    stderr: v.optional(v.string()),
+    compileOutput: v.optional(v.string()),
+    // Execution metadata
+    durationMs: v.optional(v.number()),
+  })
+    .index("by_questionId", ["questionId"])
+    .index("by_userId", ["userId"])
+    .index("by_questionId_and_userId", ["questionId", "userId"]),
+
   // User answers to questions
   answers: defineTable({
     questionId: v.id("questions"),
