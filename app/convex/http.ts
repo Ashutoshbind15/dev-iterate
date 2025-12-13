@@ -5,6 +5,7 @@ import { savePersonalizedQuestions } from "./httpactions/personalizedQuestions";
 import { saveLessonContent } from "./httpactions/lessonContent";
 import { saveTopics } from "./httpactions/topics";
 import { saveTopicResearchSummary } from "./httpactions/topicResearchSummary";
+import { getRecentSummaries } from "./httpactions/summaries";
 import {
   getTestCasesForJudge,
   updateSubmissionResult,
@@ -48,6 +49,12 @@ http.route({
   path: "/topic-research-summary",
   method: "POST",
   handler: saveTopicResearchSummary,
+});
+
+http.route({
+  path: "/summaries",
+  method: "GET",
+  handler: getRecentSummaries,
 });
 
 // Coding submission judge integration routes

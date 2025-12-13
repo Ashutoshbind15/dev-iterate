@@ -22,6 +22,7 @@ import type * as httpactions_codingSubmissions from "../httpactions/codingSubmis
 import type * as httpactions_feed from "../httpactions/feed.js";
 import type * as httpactions_lessonContent from "../httpactions/lessonContent.js";
 import type * as httpactions_personalizedQuestions from "../httpactions/personalizedQuestions.js";
+import type * as httpactions_summaries from "../httpactions/summaries.js";
 import type * as httpactions_topicResearchSummary from "../httpactions/topicResearchSummary.js";
 import type * as httpactions_topics from "../httpactions/topics.js";
 import type * as httpactions_userWeakness from "../httpactions/userWeakness.js";
@@ -44,6 +45,7 @@ import type * as queries_diagrams from "../queries/diagrams.js";
 import type * as queries_lessons from "../queries/lessons.js";
 import type * as queries_personalizedQuestions from "../queries/personalizedQuestions.js";
 import type * as queries_questions from "../queries/questions.js";
+import type * as queries_summaries from "../queries/summaries.js";
 import type * as queries_user from "../queries/user.js";
 
 import type {
@@ -67,6 +69,7 @@ declare const fullApi: ApiFromModules<{
   "httpactions/feed": typeof httpactions_feed;
   "httpactions/lessonContent": typeof httpactions_lessonContent;
   "httpactions/personalizedQuestions": typeof httpactions_personalizedQuestions;
+  "httpactions/summaries": typeof httpactions_summaries;
   "httpactions/topicResearchSummary": typeof httpactions_topicResearchSummary;
   "httpactions/topics": typeof httpactions_topics;
   "httpactions/userWeakness": typeof httpactions_userWeakness;
@@ -89,6 +92,7 @@ declare const fullApi: ApiFromModules<{
   "queries/lessons": typeof queries_lessons;
   "queries/personalizedQuestions": typeof queries_personalizedQuestions;
   "queries/questions": typeof queries_questions;
+  "queries/summaries": typeof queries_summaries;
   "queries/user": typeof queries_user;
 }>;
 

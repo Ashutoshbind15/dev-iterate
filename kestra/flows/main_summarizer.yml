@@ -1,0 +1,83 @@
+id: main_summarizer
+namespace: main
+
+description: |
+  Fetches recent summaries from all sources (RSS, webresearch, RAG) and generates
+  relevant lesson titles with descriptions based on the combined content.
+
+inputs:
+  - id: limit
+    type: INT
+    description: Maximum number of summaries to fetch (default 15)
+    defaults: 15
+
+tasks:
+  - id: fetchSummaries
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/summaries?limit={{ inputs.limit }}"
+    method: GET
+    headers:
+      Content-Type: application/json
+
+  - id: generateLessonTitles
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: "anthropic/claude-sonnet-4.5"
+    systemMessage: |
+      You are an expert curriculum designer who creates engaging lesson titles and descriptions.
+      Given a collection of summaries from various sources (RSS feeds, web research, RAG knowledge base),
+      identify key themes and generate compelling lesson titles.
+
+      For each lesson:
+      - Make the title specific and actionable
+      - Include a brief 2-3 sentence description of what the lesson should cover
+
+      Return ONLY valid JSON matching the required schema.
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["lessons"]
+          additionalProperties: false
+          properties:
+            lessons:
+              type: array
+              description: "Array of lesson suggestions"
+              items:
+                type: object
+                required: ["title", "description"]
+                additionalProperties: false
+                properties:
+                  title:
+                    type: string
+                    description: "The lesson title - specific and engaging"
+                  description:
+                    type: string
+                    description: "2-3 sentence description of what the lesson covers"
+
+    prompt: |
+      Analyze the following summaries from various sources and generate 3-5 compelling lesson titles.
+      Focus on identifying the most valuable and teachable concepts.
+
+      SUMMARIES:
+      {{ outputs.fetchSummaries.body }}
+
+      Generate lessons that:
+      1. Cover the most important/trending topics from the summaries
+      2. Have clear learning outcomes
+      3. Are distinct from each other (don't overlap too much)
+
+  - id: createLessons
+    type: io.kestra.plugin.core.flow.Subflow
+    flowId: create_lessons
+    namespace: main
+    inputs:
+      lessonsgen: "{{outputs.generateLessonTitles['jsonOutput']['lessons']}}"
+
+outputs:
+  - id: lessonSuggestions
+    type: JSON
+    value: "{{ outputs.generateLessonTitles['jsonOutput'] }}"
