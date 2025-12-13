@@ -1,0 +1,17 @@
+id: create_lessons
+namespace: main
+
+inputs:
+  - id: lessonsgen
+    type: STRING
+
+tasks:
+  - id: looper
+    type: io.kestra.plugin.core.flow.ForEach
+    values: '{{inputs.lessonsgen | jq(".[]")}}'
+    tasks:
+      - id: log
+        type: io.kestra.plugin.core.log.Log
+        message:
+          - title is - {{taskrun.value | jq('.title') | first }}
+          - description is - {{taskrun.value | jq('.description') | first }}
