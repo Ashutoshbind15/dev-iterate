@@ -1,7 +1,4 @@
-.judge0/
 dist/
 node_modules/
 .env
 .env.*
-
-
