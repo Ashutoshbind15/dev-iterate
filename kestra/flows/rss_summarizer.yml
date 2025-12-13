@@ -2,42 +2,17 @@ id: rss_summarizer
 namespace: main
 
 tasks:
-  - id: summarize_feed
-    type: io.kestra.plugin.core.flow.WorkingDirectory
+  - id: looper
+    type: io.kestra.plugin.core.flow.ForEach
+    # Store RSS_URLS in KV as a comma-separated string of feed URLs
+    values: "{{ kv('RSS_URLS') | split(',') }}"
     tasks:
-      - id: clone
-        type: io.kestra.plugin.git.Clone
-        url: "https://github.com/Ashutoshbind15/dev-iterate"
-
-      - id: code
-        type: io.kestra.plugin.scripts.python.Commands
-        dependencies:
-          - kestra
-          - pandas
-          - feedparser
-        env:
-          RSS_URLS: "{{trigger.body.rssuris}}"
-        commands:
-          - python automation-scripts/rssreader.py
-
-      - id: summarizer-agent
-        type: io.kestra.plugin.ai.agent.AIAgent
-        provider:
-          type: io.kestra.plugin.ai.provider.OpenRouter
-          apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
-          modelName: google/gemini-2.5-flash
-        prompt: |-
-          Given a list of recent rss feeds, summarize them into 10-15 sentences 
-
-          RSS FEEDS:
-          {{ outputs.code["vars"]["feedxmlstring"] }}
-
-      - id: httpaction
-        type: io.kestra.plugin.core.http.Request
-        uri: "{{ secret('ACTIONS_BASE_URL') }}/feed"
-        method: POST
-        formData:
-          summary: '{{ outputs["summarizer-agent"]["textOutput"] }}'
+      - id: summarize_one
+        type: io.kestra.plugin.core.flow.Subflow
+        flowId: rss_single_summarizer
+        namespace: main
+        inputs:
+          feedUrl: "{{ taskrun.value | trim }}"
 
 triggers:
   - id: webhook

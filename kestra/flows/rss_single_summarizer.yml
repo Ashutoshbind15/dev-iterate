@@ -1,0 +1,68 @@
+id: rss_single_summarizer
+namespace: main
+
+inputs:
+  - id: feedUrl
+    type: STRING
+    description: RSS/Atom feed URL to fetch and summarize
+
+tasks:
+  - id: workdir
+    type: io.kestra.plugin.core.flow.WorkingDirectory
+    tasks:
+      - id: clone
+        type: io.kestra.plugin.git.Clone
+        url: "https://github.com/Ashutoshbind15/dev-iterate"
+
+      - id: code
+        type: io.kestra.plugin.scripts.python.Commands
+        dependencies:
+          - kestra
+          - feedparser
+          - pandas
+        env:
+          RSS_URL: "{{ inputs.feedUrl }}"
+        commands:
+          - python automation-scripts/rssreader.py
+
+      - id: summarizer
+        type: io.kestra.plugin.ai.agent.AIAgent
+        provider:
+          type: io.kestra.plugin.ai.provider.OpenRouter
+          apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+          modelName: "anthropic/claude-haiku-4.5"
+        systemMessage: |
+          You summarize RSS/Atom feed items into a concise, high-signal summary.
+          Return ONLY valid JSON matching the schema.
+        configuration:
+          responseFormat:
+            type: JSON
+            jsonSchema:
+              type: object
+              required: ["summary"]
+              additionalProperties: false
+              properties:
+                summary:
+                  type: string
+                  description: "The feed summary"
+        prompt: |-
+          Summarize the following RSS feed into 8-12 sentences. Prefer concrete details and avoid filler.
+
+          Feed URL: {{ outputs.code["vars"]["feedUrl"] }}
+          Feed Title: {{ outputs.code["vars"]["feedTitle"] }}
+
+          RSS FEED ITEMS (XML):
+          {{ outputs.code["vars"]["feedxmlstring"] }}
+
+      - id: httpaction
+        type: io.kestra.plugin.core.http.Request
+        uri: "{{ secret('ACTIONS_BASE_URL') }}/feed"
+        method: POST
+        headers:
+          Content-Type: application/json
+        body: |
+          {
+            "feedUrl": "{{ outputs.code["vars"]["feedUrl"] }}",
+            "feedTitle": "{{ outputs.code["vars"]["feedTitle"] }}",
+            "summary": "{{ outputs.summarizer["jsonOutput"]["summary"] }}"
+          }

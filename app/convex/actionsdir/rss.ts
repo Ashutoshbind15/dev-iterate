@@ -1,7 +1,7 @@
 import { internalAction } from "../_generated/server";
 import { v } from "convex/values";
 
-const triggerWebhook = async (rssUrls: string[]) => {
+const triggerWebhook = async (rssUrls?: string[]) => {
   const WEBHOOK_TRIGGER_KEY = process.env.WEBHOOK_TRIGGER_KEY;
   if (!WEBHOOK_TRIGGER_KEY) {
     throw new Error("WEBHOOK_TRIGGER_KEY is not set");
@@ -24,9 +24,10 @@ const triggerWebhook = async (rssUrls: string[]) => {
       "Content-Type": "application/json",
       Authorization: `Basic ${encodedCredentials}`,
     },
-    body: JSON.stringify({
-      rssuris: rssUrls.join(","),
-    }),
+    body:
+      rssUrls && rssUrls.length > 0
+        ? JSON.stringify({ rssuris: rssUrls.join(",") })
+        : JSON.stringify({}),
   });
 
   if (!response.ok) {
@@ -40,7 +41,7 @@ const triggerWebhook = async (rssUrls: string[]) => {
 
 export const triggerSummarization = internalAction({
   args: {
-    rssUrls: v.array(v.string()),
+    rssUrls: v.optional(v.array(v.string())),
   },
   handler: async (ctx, args) => {
     await triggerWebhook(args.rssUrls);

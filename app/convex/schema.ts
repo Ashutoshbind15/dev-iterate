@@ -57,8 +57,10 @@ export default defineSchema({
 
   // RSS feed summaries
   rssSummaries: defineTable({
+    feedUrl: v.string(),
+    feedTitle: v.optional(v.string()),
     summaryText: v.string(),
-  }),
+  }).index("by_feedUrl", ["feedUrl"]),
 
   // System/user generated topics (e.g. daily trends)
   topics: defineTable({
