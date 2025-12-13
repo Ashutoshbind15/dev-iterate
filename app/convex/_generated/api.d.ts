@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as actionsdir_contentSubmission from "../actionsdir/contentSubmission.js";
 import type * as actionsdir_diagramGeneration from "../actionsdir/diagramGeneration.js";
 import type * as actionsdir_lessonContent from "../actionsdir/lessonContent.js";
 import type * as actionsdir_personalizedQuestions from "../actionsdir/personalizedQuestions.js";
@@ -45,6 +46,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "actionsdir/contentSubmission": typeof actionsdir_contentSubmission;
   "actionsdir/diagramGeneration": typeof actionsdir_diagramGeneration;
   "actionsdir/lessonContent": typeof actionsdir_lessonContent;
   "actionsdir/personalizedQuestions": typeof actionsdir_personalizedQuestions;

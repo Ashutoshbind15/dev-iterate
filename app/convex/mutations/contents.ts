@@ -2,6 +2,7 @@ import { internalMutation, mutation } from "../_generated/server";
 import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
+import { internal } from "../_generated/api";
 
 export const createContent = mutation({
   args: {
@@ -13,12 +14,24 @@ export const createContent = mutation({
     if (userId === null) {
       throw new ConvexError("User not authenticated");
     }
-    return await ctx.db.insert("contents", {
+    const contentId = await ctx.db.insert("contents", {
       title: args.title,
       content: args.content,
       status: "completed",
       userId,
     });
+
+    // Trigger Kestra indexing workflow (fire-and-forget)
+    await ctx.scheduler.runAfter(
+      0,
+      internal.actionsdir.contentSubmission.triggerContentSubmissionIndexing,
+      {
+        contentId,
+        jsonct: args.content,
+      }
+    );
+
+    return contentId;
   },
 });
 

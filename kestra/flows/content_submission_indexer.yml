@@ -1,0 +1,17 @@
+id: content_submission_indexer
+namespace: main
+
+tasks:
+  # Expect the webhook caller to send a stringified TipTap doc JSON in `jsonct`.
+  # Example request body: { "jsonct": "<JSON.stringify(tiptapDoc)>" }
+  - id: index_submitted_content
+    type: io.kestra.plugin.core.flow.Subflow
+    flowId: jsontomdindex
+    namespace: main
+    inputs:
+      jsonct: "{{ trigger.body.jsonct }}"
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"
