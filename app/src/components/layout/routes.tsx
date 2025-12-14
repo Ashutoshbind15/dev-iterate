@@ -21,6 +21,9 @@ import PersonalizedQuestionSetViewPage from "@/pages/personalized-question-set-v
 import CodingSolvePage from "@/pages/coding-solve";
 import CodingQuestionsPage from "@/pages/coding-questions";
 import CreateCodingQuestionPage from "@/pages/create-coding-question";
+import PersonalizedCodingQuestionsViewPage from "@/pages/personalized-coding-questions-view";
+import PersonalizedCodingQuestionSetViewPage from "@/pages/personalized-coding-question-set-view";
+import PersonalizedCodingSolvePage from "@/pages/personalized-coding-solve";
 
 const RouteComp = () => {
   return (
@@ -50,10 +53,7 @@ const RouteComp = () => {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/contribute" element={<ContributeQuestionPage />} />
           {/* Coding questions routes */}
-          <Route
-            path="/coding/create"
-            element={<CreateCodingQuestionPage />}
-          />
+          <Route path="/coding/create" element={<CreateCodingQuestionPage />} />
           <Route
             path="/coding/:questionId/solve"
             element={<CodingSolvePage />}
@@ -74,6 +74,19 @@ const RouteComp = () => {
           <Route
             path="/personalized-questions/question/:id"
             element={<PersonalizedQuestionViewPage />}
+          />
+          {/* Personalized coding questions routes */}
+          <Route
+            path="/personalized-coding"
+            element={<PersonalizedCodingQuestionsViewPage />}
+          />
+          <Route
+            path="/personalized-coding/set/:id"
+            element={<PersonalizedCodingQuestionSetViewPage />}
+          />
+          <Route
+            path="/personalized-coding/:questionId/solve"
+            element={<PersonalizedCodingSolvePage />}
           />
         </Route>
       </Route>

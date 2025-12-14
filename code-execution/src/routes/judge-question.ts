@@ -31,7 +31,9 @@ export function createJudgeQuestionRoute(
       return;
     }
 
-    const { questionId, submissionId, languageId, sourceCode } = parsed.data;
+    const { questionId, submissionId, languageId, sourceCode, submissionKind } =
+      parsed.data;
+    const kind = submissionKind ?? "standard";
 
     // Validate source code size
     if (Buffer.byteLength(sourceCode, "utf8") > config.maxSourceBytes) {
@@ -46,7 +48,7 @@ export function createJudgeQuestionRoute(
 
     // Mark submission as running - this is the sync part we wait for
     try {
-      await convex.markSubmissionRunning(submissionId);
+      await convex.markSubmissionRunning(submissionId, kind);
     } catch (err) {
       console.error(`[${requestId}] Failed to mark submission running:`, err);
       // Return error - we couldn't even start
@@ -77,6 +79,7 @@ export function createJudgeQuestionRoute(
         languageId,
         sourceCode,
         startTime,
+        submissionKind: kind,
       })
       .catch((err) => {
         // This catch is just a safety net - processor.process

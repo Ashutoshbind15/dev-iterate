@@ -24,6 +24,8 @@ export interface ConvexSubmissionResult {
   durationMs?: number;
 }
 
+export type SubmissionKind = "standard" | "personalized";
+
 export class ConvexService {
   private siteUrl: string;
 
@@ -31,10 +33,25 @@ export class ConvexService {
     this.siteUrl = config.siteUrl.replace(/\/+$/, "");
   }
 
+  private paths(kind: SubmissionKind) {
+    return kind === "personalized"
+      ? {
+          testcases: "/coding/personalized-testcases",
+          running: "/coding/personalized-submission-running",
+          result: "/coding/personalized-submission-result",
+        }
+      : {
+          testcases: "/coding/testcases",
+          running: "/coding/submission-running",
+          result: "/coding/submission-result",
+        };
+  }
+
   async fetchTestCases(
-    questionId: string
+    questionId: string,
+    kind: SubmissionKind = "standard"
   ): Promise<ConvexTestCasesResponse | null> {
-    const url = `${this.siteUrl}/coding/testcases`;
+    const url = `${this.siteUrl}${this.paths(kind).testcases}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -54,8 +71,11 @@ export class ConvexService {
     return ConvexTestCasesResponseSchema.parse(json);
   }
 
-  async markSubmissionRunning(submissionId: string): Promise<void> {
-    const url = `${this.siteUrl}/coding/submission-running`;
+  async markSubmissionRunning(
+    submissionId: string,
+    kind: SubmissionKind = "standard"
+  ): Promise<void> {
+    const url = `${this.siteUrl}${this.paths(kind).running}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -70,9 +90,10 @@ export class ConvexService {
 
   async updateSubmissionResult(
     submissionId: string,
-    result: ConvexSubmissionResult
+    result: ConvexSubmissionResult,
+    kind: SubmissionKind = "standard"
   ): Promise<void> {
-    const url = `${this.siteUrl}/coding/submission-result`;
+    const url = `${this.siteUrl}${this.paths(kind).result}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },

@@ -6,6 +6,7 @@ export const JudgeQuestionRequestSchema = z
     submissionId: z.string(), // Convex ID
     languageId: z.number().int().positive(),
     sourceCode: z.string(),
+    submissionKind: z.enum(["standard", "personalized"]).optional(),
   })
   .strict();
 

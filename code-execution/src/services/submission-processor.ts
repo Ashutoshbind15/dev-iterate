@@ -6,7 +6,11 @@ import {
   type Judge0Result,
 } from "../judge0/client.js";
 import { compareOutputs, type CompareOptions } from "../judge0/compare.js";
-import { ConvexService, type ConvexSubmissionResult } from "./convex.js";
+import {
+  ConvexService,
+  type ConvexSubmissionResult,
+  type SubmissionKind,
+} from "./convex.js";
 import type { ConvexTestCasesResponse } from "../contracts.js";
 
 export interface SubmissionProcessorConfig {
@@ -20,6 +24,7 @@ export interface SubmissionInput {
   languageId: number;
   sourceCode: string;
   startTime: number;
+  submissionKind: SubmissionKind;
 }
 
 export class SubmissionProcessor {
@@ -35,21 +40,29 @@ export class SubmissionProcessor {
    * handled internally and reported back to Convex via HTTP callbacks.
    */
   async process(input: SubmissionInput): Promise<void> {
-    const { requestId, submissionId, questionId, languageId, sourceCode, startTime } = input;
+    const {
+      requestId,
+      submissionId,
+      questionId,
+      languageId,
+      sourceCode,
+      startTime,
+      submissionKind,
+    } = input;
 
     // Fetch testcases from Convex
     let convexData: ConvexTestCasesResponse | null;
     try {
-      convexData = await this.convex.fetchTestCases(questionId);
+      convexData = await this.convex.fetchTestCases(questionId, submissionKind);
     } catch (err) {
       console.error(`[${requestId}] Failed to fetch testcases:`, err);
-      await this.updateWithError(submissionId, startTime, requestId);
+      await this.updateWithError(submissionId, startTime, requestId, submissionKind);
       return;
     }
 
     if (!convexData) {
       // Question not found
-      await this.updateWithError(submissionId, startTime, requestId);
+      await this.updateWithError(submissionId, startTime, requestId, submissionKind);
       return;
     }
 
@@ -57,7 +70,7 @@ export class SubmissionProcessor {
 
     // Validate testcase count
     if (testCases.length === 0 || testCases.length > this.config.maxTestcases) {
-      await this.updateWithError(submissionId, startTime, requestId);
+      await this.updateWithError(submissionId, startTime, requestId, submissionKind);
       return;
     }
 
@@ -99,7 +112,7 @@ export class SubmissionProcessor {
           totalCount: testCases.length,
           firstFailureIndex: i,
           durationMs,
-        });
+        }, submissionKind);
         return;
       }
 
@@ -142,7 +155,7 @@ export class SubmissionProcessor {
           firstFailure: buildFirstFailure(actualStdout, errorMessage),
           compileOutput: result.compile_output ?? undefined,
           durationMs,
-        });
+        }, submissionKind);
         return;
       }
 
@@ -164,7 +177,7 @@ export class SubmissionProcessor {
           firstFailure: buildFirstFailure(actualStdout, errorMessage),
           stderr: result.stderr ?? undefined,
           durationMs,
-        });
+        }, submissionKind);
         return;
       }
 
@@ -185,7 +198,7 @@ export class SubmissionProcessor {
           firstFailureIndex: i,
           firstFailure: buildFirstFailure(actualStdout, errorMessage),
           durationMs,
-        });
+        }, submissionKind);
         return;
       }
 
@@ -212,7 +225,7 @@ export class SubmissionProcessor {
           firstFailureIndex: i,
           firstFailure: buildFirstFailure(actualStdout, errorMessage),
           durationMs,
-        });
+        }, submissionKind);
         return;
       }
 
@@ -231,19 +244,24 @@ export class SubmissionProcessor {
       passedCount,
       totalCount: testCases.length,
       durationMs,
-    });
+    }, submissionKind);
   }
 
   private async updateWithError(
     submissionId: string,
     startTime: number,
-    requestId: string
+    requestId: string,
+    submissionKind: SubmissionKind
   ): Promise<void> {
     try {
-      await this.convex.updateSubmissionResult(submissionId, {
-        status: "error",
-        durationMs: Date.now() - startTime,
-      });
+      await this.convex.updateSubmissionResult(
+        submissionId,
+        {
+          status: "error",
+          durationMs: Date.now() - startTime,
+        },
+        submissionKind
+      );
     } catch (updateErr) {
       console.error(`[${requestId}] Failed to update error status:`, updateErr);
     }
@@ -252,10 +270,11 @@ export class SubmissionProcessor {
   private async safeUpdate(
     submissionId: string,
     requestId: string,
-    result: ConvexSubmissionResult
+    result: ConvexSubmissionResult,
+    submissionKind: SubmissionKind
   ): Promise<void> {
     try {
-      await this.convex.updateSubmissionResult(submissionId, result);
+      await this.convex.updateSubmissionResult(submissionId, result, submissionKind);
     } catch (updateErr) {
       console.error(`[${requestId}] Failed to update submission:`, updateErr);
     }

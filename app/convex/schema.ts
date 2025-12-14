@@ -310,5 +310,131 @@ export default defineSchema({
       "userId",
     ]),
 
+  // ============================================================
+  // CODING QUESTION PERSONALIZATION
+  // ============================================================
+
+  // User remarks from coding weakness analysis (one per batch of 10 submissions)
+  codingUserRemarks: defineTable({
+    userId: v.id("users"),
+    remark: v.string(), // One-line remark from Kestra AI analysis
+    submissionIds: v.array(v.id("codingSubmissions")), // The 10 submissions that triggered this analysis
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
+
+  // Track coding weakness analysis executions to prevent redundant runs
+  codingWeaknessAnalysisExecutions: defineTable({
+    userId: v.id("users"),
+    submissionIds: v.array(v.id("codingSubmissions")), // The 10 submissions being analyzed
+    status: v.union(
+      v.literal("pending"), // Analysis triggered but not completed
+      v.literal("completed") // Analysis completed and remark saved
+    ),
+    triggeredAt: v.number(), // When the analysis was triggered
+    completedAt: v.optional(v.number()), // When the remark was saved
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_status", ["userId", "status"]),
+
+  // Personalized coding question submissions (track generation requests)
+  personalizedCodingQuestionSubmissions: defineTable({
+    userId: v.id("users"),
+    remarkIds: v.array(v.id("codingUserRemarks")), // The remarks used for this submission
+    analysis: v.string(), // Comma-separated analysis string
+    status: v.union(
+      v.literal("pending"), // Generation queued but not completed
+      v.literal("completed"), // Generation completed
+      v.literal("failed") // Generation failed
+    ),
+    createdAt: v.number(),
+    completedAt: v.optional(v.number()),
+    errorMessage: v.optional(v.string()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_user_and_status", ["userId", "status"]),
+
+  // Personalized coding questions (separate from regular coding questions)
+  personalizedCodingQuestions: defineTable({
+    userId: v.id("users"),
+    submissionId: v.id("personalizedCodingQuestionSubmissions"), // Link to the submission that generated this
+    title: v.string(),
+    promptRichText: v.string(), // JSON stringified TipTap/rich-text content for problem statement
+    difficulty: v.union(
+      v.literal("easy"),
+      v.literal("medium"),
+      v.literal("hard")
+    ),
+    tags: v.array(v.string()),
+    // Allowed Judge0 language IDs (e.g., 71 for Python 3, 63 for JavaScript)
+    languageIdsAllowed: v.array(v.number()),
+    // Default language ID to show in editor
+    defaultLanguageId: v.number(),
+    // Time limit per testcase in seconds
+    timeLimitSeconds: v.number(),
+    // Memory limit in MB
+    memoryLimitMb: v.number(),
+    // Output comparison settings
+    outputComparison: v.object({
+      trimOutputs: v.boolean(),
+      normalizeWhitespace: v.boolean(),
+      caseSensitive: v.boolean(),
+    }),
+    // Starter code per language (key: languageId as string, value: code)
+    starterCode: v.optional(v.record(v.string(), v.string())),
+    createdAt: v.number(),
+  })
+    .index("by_user", ["userId"])
+    .index("by_submission", ["submissionId"]),
+
+  // Testcases for personalized coding questions
+  personalizedCodingTestCases: defineTable({
+    questionId: v.id("personalizedCodingQuestions"),
+    visibility: v.union(v.literal("public"), v.literal("hidden")),
+    stdin: v.string(),
+    expectedStdout: v.string(),
+    name: v.optional(v.string()), // Optional descriptive name
+    order: v.number(), // For deterministic ordering
+  })
+    .index("by_questionId", ["questionId"])
+    .index("by_questionId_and_visibility", ["questionId", "visibility"])
+    .index("by_questionId_and_order", ["questionId", "order"]),
+
+  // Submissions for personalized coding questions
+  personalizedCodingSubmissions: defineTable({
+    questionId: v.id("personalizedCodingQuestions"),
+    userId: v.id("users"),
+    languageId: v.number(), // Judge0 language ID
+    sourceCode: v.string(),
+    status: v.union(
+      v.literal("queued"),
+      v.literal("running"),
+      v.literal("passed"),
+      v.literal("failed"),
+      v.literal("error")
+    ),
+    // Results summary
+    passedCount: v.optional(v.number()),
+    totalCount: v.optional(v.number()),
+    firstFailureIndex: v.optional(v.number()), // Index of first failing testcase (if any)
+    // First failure details (redacted - don't expose hidden testcase expected output)
+    firstFailure: v.optional(
+      v.object({
+        stdin: v.optional(v.string()), // Only shown for public testcases
+        actualOutput: v.optional(v.string()),
+        expectedOutput: v.optional(v.string()), // Only shown for public testcases
+        errorMessage: v.optional(v.string()),
+      })
+    ),
+    // Optional execution outputs (useful for debugging)
+    stdout: v.optional(v.string()),
+    stderr: v.optional(v.string()),
+    compileOutput: v.optional(v.string()),
+    // Execution metadata
+    durationMs: v.optional(v.number()),
+  })
+    .index("by_questionId", ["questionId"])
+    .index("by_userId", ["userId"])
+    .index("by_questionId_and_userId", ["questionId", "userId"]),
+
   ...authTables,
 });

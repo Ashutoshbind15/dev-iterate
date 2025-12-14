@@ -1,0 +1,76 @@
+id: coding_user_weakness_analyzer
+namespace: main
+
+tasks:
+  - id: format_payload
+    type: io.kestra.plugin.scripts.node.Script
+    beforeCommands:
+      - npm i @kestra-io/libs
+    taskRunner:
+      type: io.kestra.plugin.scripts.runner.docker.Docker
+    containerImage: node:slim
+    script: |
+      const Kestra = require("@kestra-io/libs");
+
+      const rawJsonString = `{{ trigger.body }}`
+
+      const parsed = JSON.parse(rawJsonString)
+      const submissionIds = []
+      for (const s of parsed.submissions) {
+        submissionIds.push(s.submissionId)
+      }
+
+      Kestra.outputs({'submission_ids_json': submissionIds})
+
+  - id: analyze_weakness
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: openai/gpt-5.1
+    prompt: |-
+      You are a coding coach analyzing a student's performance on 10 coding problem submissions.
+
+      Given the following information, provide a ONE-LINE remark (max 150 characters) that summarizes their coding progress and areas to focus on.
+
+      PAST REMARKS (for context):
+      {{ trigger.body.pastRemarks }}
+
+      RECENT 10 CODING SUBMISSIONS:
+      {{ trigger.body.submissions }}
+
+      For each submission, you can see:
+      - questionTitle: The coding problem title
+      - questionTags: Topics covered (e.g., arrays, strings, dp)
+      - difficulty: easy/medium/hard
+      - languageId: The programming language used (71=Python, 63=JavaScript, 62=Java, 54=C++)
+      - status: passed/failed/error
+      - passedCount/totalCount: Test case results
+      - firstFailure.errorMessage: Why the submission failed (if applicable)
+
+      Analyze patterns such as:
+      - Which problem types they struggle with
+      - Common error patterns (wrong output, runtime errors, time limits)
+      - Languages they use and their proficiency
+      - Difficulty level progression
+
+      Provide a concise, actionable one-line remark that helps the student understand their coding progress and what to focus on next.
+      Return ONLY the remark text, no quotes, no explanations, just the remark.
+
+  - id: save_remark
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/coding-user-weakness"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "userId": "{{ trigger.body.userId }}",
+        "remark": {{ outputs.analyze_weakness.textOutput | trim | json }},
+        "submissionIds": {{ outputs.format_payload["vars"]["submission_ids_json"] | json }}
+      }
+
+triggers:
+  - id: webhook
+    type: io.kestra.plugin.core.trigger.Webhook
+    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"

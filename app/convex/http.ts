@@ -11,6 +11,13 @@ import {
   updateSubmissionResult,
   markSubmissionRunning,
 } from "./httpactions/codingSubmissions";
+import { saveCodingUserWeakness } from "./httpactions/codingUserWeakness";
+import { savePersonalizedCodingQuestions } from "./httpactions/personalizedCodingQuestions";
+import {
+  getPersonalizedTestCasesForJudge,
+  updatePersonalizedSubmissionResult,
+  markPersonalizedSubmissionRunning,
+} from "./httpactions/personalizedCodingSubmissions";
 import { auth } from "./auth";
 
 const http = httpRouter();
@@ -75,6 +82,38 @@ http.route({
   path: "/coding/submission-running",
   method: "POST",
   handler: markSubmissionRunning,
+});
+
+// Coding personalization routes
+http.route({
+  path: "/coding-user-weakness",
+  method: "POST",
+  handler: saveCodingUserWeakness,
+});
+
+http.route({
+  path: "/personalized-coding-questions",
+  method: "POST",
+  handler: savePersonalizedCodingQuestions,
+});
+
+// Personalized coding submission judge integration routes
+http.route({
+  path: "/coding/personalized-testcases",
+  method: "POST",
+  handler: getPersonalizedTestCasesForJudge,
+});
+
+http.route({
+  path: "/coding/personalized-submission-result",
+  method: "POST",
+  handler: updatePersonalizedSubmissionResult,
+});
+
+http.route({
+  path: "/coding/personalized-submission-running",
+  method: "POST",
+  handler: markPersonalizedSubmissionRunning,
 });
 
 auth.addHttpRoutes(http);

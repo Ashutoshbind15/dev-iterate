@@ -1,5 +1,12 @@
 import { Link, useLocation } from "react-router";
-import { BookOpen, Layers, User, HelpCircle, Sparkles, Code2 } from "lucide-react";
+import {
+  BookOpen,
+  Layers,
+  User,
+  HelpCircle,
+  Sparkles,
+  Code2,
+} from "lucide-react";
 import {
   Authenticated,
   AuthLoading,
@@ -22,6 +29,8 @@ import { cn } from "@/lib/utils";
 const Navbar = () => {
   const location = useLocation();
   const hasAnalysis = useQuery(api.queries.user.hasUserAnalysis) ?? false;
+  const hasCodingAnalysis =
+    useQuery(api.queries.user.hasCodingAnalysis) ?? false;
 
   const isActive = (path: string) => {
     if (path === "/") return location.pathname === "/";
@@ -170,6 +179,7 @@ const Navbar = () => {
               <NavigationMenuContent>
                 <ul className="grid gap-1 w-[320px]">
                   <Authenticated>
+                    {/* Personalized Questions */}
                     {hasAnalysis ? (
                       <li>
                         <NavigationMenuLink asChild>
@@ -198,7 +208,41 @@ const Navbar = () => {
                             Personalized questions
                           </span>
                           <span className="text-muted-foreground text-xs">
-                            Available after your analysis is ready
+                            Answer 5 questions to unlock
+                          </span>
+                        </div>
+                      </li>
+                    )}
+                    {/* Personalized Coding */}
+                    {hasCodingAnalysis ? (
+                      <li>
+                        <NavigationMenuLink asChild>
+                          <Link
+                            to="/personalized-coding"
+                            data-active={isActive("/personalized-coding")}
+                          >
+                            <span className="font-medium">
+                              Personalized coding
+                            </span>
+                            <span className="text-muted-foreground text-xs">
+                              AI-generated coding challenges for you
+                            </span>
+                          </Link>
+                        </NavigationMenuLink>
+                      </li>
+                    ) : (
+                      <li>
+                        <div
+                          className={cn(
+                            "flex flex-col gap-1 rounded-sm p-2 text-sm opacity-60 cursor-not-allowed select-none"
+                          )}
+                          aria-disabled="true"
+                        >
+                          <span className="font-medium">
+                            Personalized coding
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            Submit 10 coding solutions to unlock
                           </span>
                         </div>
                       </li>
@@ -215,6 +259,19 @@ const Navbar = () => {
                         <span className="font-medium">
                           Personalized questions
                         </span>
+                        <span className="text-muted-foreground text-xs">
+                          Sign in to access improve tools
+                        </span>
+                      </div>
+                    </li>
+                    <li>
+                      <div
+                        className={cn(
+                          "flex flex-col gap-1 rounded-sm p-2 text-sm opacity-60 select-none"
+                        )}
+                        aria-disabled="true"
+                      >
+                        <span className="font-medium">Personalized coding</span>
                         <span className="text-muted-foreground text-xs">
                           Sign in to access improve tools
                         </span>

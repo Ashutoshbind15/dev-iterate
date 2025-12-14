@@ -76,6 +76,7 @@ export const getLeaderboardPaginated = query({
  */
 export const hasUserAnalysis = query({
   args: {},
+  returns: v.boolean(),
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
     if (userId === null) {
@@ -84,6 +85,27 @@ export const hasUserAnalysis = query({
 
     const remark = await ctx.db
       .query("userRemarks")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .first();
+
+    return remark !== undefined;
+  },
+});
+
+/**
+ * Check if the current user has any coding analysis (codingUserRemarks)
+ */
+export const hasCodingAnalysis = query({
+  args: {},
+  returns: v.boolean(),
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (userId === null) {
+      return false;
+    }
+
+    const remark = await ctx.db
+      .query("codingUserRemarks")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .first();
 

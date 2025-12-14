@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
+import { Id } from "../_generated/dataModel";
 
 /**
  * Create a new coding submission.
@@ -78,6 +79,8 @@ const firstFailureValidator = v.object({
  * Update a submission's status and results.
  * This is an INTERNAL mutation - only callable from trusted backend (judge integration).
  * Should NOT be exposed to clients.
+ *
+ * Also triggers weakness analysis after every 10 completed submissions.
  */
 export const updateCodingSubmissionResult = internalMutation({
   args: {
@@ -122,6 +125,153 @@ export const updateCodingSubmissionResult = internalMutation({
     if (args.durationMs !== undefined) updates.durationMs = args.durationMs;
 
     await ctx.db.patch(args.submissionId, updates);
+
+    // Only trigger weakness analysis for terminal states (passed/failed/error)
+    const isTerminalStatus = ["passed", "failed", "error"].includes(
+      args.status
+    );
+    if (!isTerminalStatus) {
+      return null;
+    }
+
+    const userId = submission.userId;
+
+    // Check if we should trigger weakness analysis (every 10 completed submissions)
+    const completedSubmissions = await ctx.db
+      .query("codingSubmissions")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .order("desc")
+      .collect();
+
+    // Filter to only completed submissions (passed/failed/error)
+    const terminalSubmissions = completedSubmissions.filter((s) =>
+      ["passed", "failed", "error"].includes(s.status)
+    );
+
+    // We only want to trigger when there are 10 *unanalyzed* terminal submissions.
+    // IMPORTANT: don't slice to 10 *before* filtering out already-analyzed ones,
+    // otherwise a single previously analyzed submission in the most-recent 10
+    // will block analysis forever.
+    if (terminalSubmissions.length >= 10) {
+      // Get all executions (pending and completed) in parallel
+      const [pendingExecutions, completedExecutions] = await Promise.all([
+        ctx.db
+          .query("codingWeaknessAnalysisExecutions")
+          .withIndex("by_user_and_status", (q) =>
+            q.eq("userId", userId).eq("status", "pending")
+          )
+          .collect(),
+        ctx.db
+          .query("codingWeaknessAnalysisExecutions")
+          .withIndex("by_user_and_status", (q) =>
+            q.eq("userId", userId).eq("status", "completed")
+          )
+          .collect(),
+      ]);
+
+      // Build sets of excluded submission IDs
+      const excludedSubmissionIds = new Set(
+        [...pendingExecutions, ...completedExecutions].flatMap(
+          (e) => e.submissionIds
+        )
+      );
+
+      // Filter to only unanalyzed submissions (keep overall ordering)
+      const unanalyzedTerminalSubmissions = terminalSubmissions.filter(
+        (s) => !excludedSubmissionIds.has(s._id)
+      );
+
+      // Take the 10 most recent unanalyzed submissions
+      const submissionsToAnalyze = unanalyzedTerminalSubmissions.slice(0, 10);
+
+      console.log("[codingSubmissions] weakness analysis gate", {
+        terminalCount: terminalSubmissions.length,
+        excludedCount: excludedSubmissionIds.size,
+        unanalyzedTerminalCount: unanalyzedTerminalSubmissions.length,
+        submissionsToAnalyzeCount: submissionsToAnalyze.length,
+      });
+
+      // Only proceed if we have 10 unanalyzed submissions
+      if (submissionsToAnalyze.length >= 10) {
+        // Fetch question details and build submission data in parallel
+        const submissionData = await Promise.all(
+          submissionsToAnalyze.map(async (sub) => {
+            const question = await ctx.db.get(sub.questionId);
+            if (!question) return null;
+
+            // Sanitize firstFailure to avoid JSON parsing issues with control chars
+            let sanitizedFailure: typeof sub.firstFailure = undefined;
+            if (sub.firstFailure) {
+              sanitizedFailure = {
+                // Only include error message, not raw outputs which may have newlines
+                errorMessage: sub.firstFailure.errorMessage,
+              };
+              // Add a simplified failure description if no error message
+              if (
+                !sanitizedFailure.errorMessage &&
+                sub.firstFailure.actualOutput
+              ) {
+                sanitizedFailure.errorMessage = "Wrong output";
+              }
+            }
+
+            return {
+              submissionId: sub._id.toString(),
+              questionTitle: question.title,
+              questionTags: question.tags,
+              difficulty: question.difficulty,
+              languageId: sub.languageId,
+              status: sub.status as "passed" | "failed" | "error",
+              passedCount: sub.passedCount,
+              totalCount: sub.totalCount,
+              firstFailure: sanitizedFailure,
+            };
+          })
+        );
+
+        const validSubmissions = submissionData.filter(
+          (s): s is NonNullable<typeof s> => s !== null
+        );
+
+        console.log("[codingSubmissions] weakness analysis submissionData", {
+          submissionDataCount: submissionData.length,
+          validSubmissionsCount: validSubmissions.length,
+        });
+
+        if (validSubmissions.length >= 10) {
+          const submissionIds = submissionsToAnalyze.map((s) => s._id) as Array<
+            Id<"codingSubmissions">
+          >;
+
+          // Create execution record and get past remarks in parallel
+          const [, pastRemarks] = await Promise.all([
+            ctx.db.insert("codingWeaknessAnalysisExecutions", {
+              userId,
+              submissionIds,
+              status: "pending" as const,
+              triggeredAt: Date.now(),
+            }),
+            ctx.db
+              .query("codingUserRemarks")
+              .withIndex("by_user", (q) => q.eq("userId", userId))
+              .order("desc")
+              .take(10)
+              .then((remarks) => remarks.map((r) => r.remark).join(" | ")),
+          ]);
+
+          // Trigger Kestra flow (fire-and-forget)
+          await ctx.scheduler.runAfter(
+            0,
+            internal.actionsdir.codingWeakness.triggerCodingWeaknessAnalysis,
+            {
+              userId,
+              submissions: validSubmissions.slice(0, 10),
+              pastRemarks: pastRemarks || "",
+            }
+          );
+        }
+      }
+    }
 
     return null;
   },
