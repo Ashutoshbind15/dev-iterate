@@ -15,3 +15,50 @@ tasks:
         message:
           - title is - {{taskrun.value | jq('.title') | first }}
           - description is - {{taskrun.value | jq('.description') | first }}
+
+      - id: create_sys_lesson
+        type: io.kestra.plugin.core.http.Request
+        uri: "{{ secret('ACTIONS_BASE_URL') }}/sys-lesson"
+        method: POST
+        headers:
+          Content-Type: application/json
+        body: |
+          {
+            "title": {{ taskrun.value | jq('.title') | first | json }},
+            "description": {{ taskrun.value | jq('.description') | first | json }}
+          }
+
+      - id: creatorAgent
+        type: io.kestra.plugin.ai.agent.AIAgent
+        systemMessage: |
+          You are an expert lesson creator.
+          You are given a lesson title and description, plus tools to create rich text lesson contents and lesson diagrams.
+
+          You MUST create a coherent lesson with 3-5 sections total by calling the tools.
+          Each tool call must include:
+          - topic: a short, specific topic for that section
+          - lessonId: the system lesson id provided in the prompt
+          - order: an integer (0, 1, 2, ...) in the desired display order
+
+          Use a mix of content and diagrams (at least 1 diagram).
+          Do not exceed 5 tool calls total.
+        prompt: |
+          lessonId: {{ outputs.create_sys_lesson[taskrun.value].body | jq('.lessonId') | first }}
+          lesson title: {{taskrun.value | jq('.title') | first}}
+          lesson description: {{taskrun.value | jq('.description') | first }}
+        maxSequentialToolsInvocations: 5
+        provider:
+          type: io.kestra.plugin.ai.provider.OpenRouter
+          apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+          modelName: "anthropic/claude-sonnet-4.5"
+
+        tools:
+          - type: io.kestra.plugin.ai.tool.KestraFlow
+            flowId: rte_sys_creator
+            namespace: main
+            description: Create a system lesson rich-text section. Call with JSON: {"topic": string, "lessonId": string, "order": int}
+
+          - type: io.kestra.plugin.ai.tool.KestraFlow
+            flowId: dg_sys_creator
+            namespace: main
+            description: Create a system lesson diagram section (Mermaid). Call with JSON: {"topic": string, "lessonId": string, "order": int}

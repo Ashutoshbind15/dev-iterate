@@ -1,0 +1,275 @@
+id: rte_sys_creator
+namespace: main
+
+inputs:
+  - id: topic
+    type: STRING
+  - id: lessonId
+    type: STRING
+  - id: order
+    type: INT
+
+tasks:
+  - id: create_pending
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/sys-lesson-content/pending"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topic": "{{ inputs.topic }}",
+        "lessonId": "{{ inputs.lessonId }}",
+        "order": {{ inputs.order }}
+      }
+
+  - id: generate_lesson
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: openai/gpt-5.1
+    systemMessage: |
+      You are a lesson content generator that returns ONLY valid JSON matching the TipTap/ProseMirror document schema.
+      Do not add explanations, markdown formatting, code blocks, or extra keys.
+
+      Generate educational content as a structured rich text document.
+      Use a variety of block types to make the content engaging:
+      - headings (level 1 for title, level 2 for sections, level 3 for subsections)
+      - paragraphs for explanatory text
+      - bulletList for unordered lists
+      - orderedList for sequential steps
+      - codeBlock for code examples (always specify language)
+      - blockquote for important callouts or quotes
+      - horizontalRule to separate major sections
+
+      Text formatting marks available: bold, italic, code (for inline code)
+
+      Rules:
+      - The root must be type "doc" with a "content" array
+      - All text must be wrapped in appropriate block nodes
+      - Lists contain listItem nodes, which contain paragraph nodes
+      - Empty paragraphs have no content array
+      - Code blocks must have a language attribute
+      - The returned json output should be of the following format strictly: {"type": "doc", "content": [...content nodes]}
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["type", "content"]
+          additionalProperties: false
+          properties:
+            type:
+              type: string
+              enum: ["doc"]
+            content:
+              type: array
+              minItems: 1
+              items:
+                oneOf:
+                  - type: object
+                    required: ["type", "attrs", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["heading"]
+                      attrs:
+                        type: object
+                        required: ["level"]
+                        properties:
+                          level:
+                            type: integer
+                            minimum: 1
+                            maximum: 6
+                      content:
+                        type: array
+                        items:
+                          $ref: "#/$defs/textNode"
+                  - type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["paragraph"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          $ref: "#/$defs/textNode"
+                  - type: object
+                    required: ["type"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["paragraph"]
+                  - type: object
+                    required: ["type"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["horizontalRule"]
+                  - type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["bulletList"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          $ref: "#/$defs/listItem"
+                  - type: object
+                    required: ["type", "attrs", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["orderedList"]
+                      attrs:
+                        type: object
+                        required: ["start"]
+                        properties:
+                          start:
+                            type: integer
+                            minimum: 1
+                          type:
+                            type: ["string", "null"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          $ref: "#/$defs/listItem"
+                  - type: object
+                    required: ["type", "attrs", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["codeBlock"]
+                      attrs:
+                        type: object
+                        required: ["language"]
+                        properties:
+                          language:
+                            type: string
+                      content:
+                        type: array
+                        minItems: 1
+                        maxItems: 1
+                        items:
+                          type: object
+                          required: ["type", "text"]
+                          additionalProperties: false
+                          properties:
+                            type:
+                              type: string
+                              enum: ["text"]
+                            text:
+                              type: string
+                  - type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["blockquote"]
+                      content:
+                        type: array
+                        minItems: 1
+                        items:
+                          type: object
+                          required: ["type", "content"]
+                          additionalProperties: false
+                          properties:
+                            type:
+                              type: string
+                              enum: ["paragraph"]
+                            content:
+                              type: array
+                              items:
+                                $ref: "#/$defs/textNode"
+          $defs:
+            textNode:
+              type: object
+              required: ["type", "text"]
+              additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  enum: ["text"]
+                text:
+                  type: string
+                marks:
+                  type: array
+                  items:
+                    type: object
+                    required: ["type"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["bold", "italic", "code"]
+            listItem:
+              type: object
+              required: ["type", "content"]
+              additionalProperties: false
+              properties:
+                type:
+                  type: string
+                  enum: ["listItem"]
+                content:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: ["type", "content"]
+                    additionalProperties: false
+                    properties:
+                      type:
+                        type: string
+                        enum: ["paragraph"]
+                      content:
+                        type: array
+                        items:
+                          $ref: "#/$defs/textNode"
+    prompt: |
+      Generate a comprehensive lesson section about the following topic.
+
+      TOPIC: {{ inputs.topic }}
+
+      Create engaging educational content with:
+      - A clear title (h1)
+      - Well-organized sections (h2, h3)
+      - Code examples where relevant
+      - Lists for key points
+      - Practical tips or callouts in blockquotes
+
+      Return the TipTap document JSON ONLY.
+
+  - id: save_content
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/sys-lesson-content"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topic": "{{ inputs.topic }}",
+        "contentId": "{{ outputs.create_pending.body | jq('.contentId') | first }}",
+        "content": {{ outputs.generate_lesson["jsonOutput"] }}
+      }
+
+outputs:
+  - id: contentId
+    type: STRING
+    value: "{{ outputs.create_pending.body | jq('.contentId') | first }}"
+    description: System content id created for this section
+
+

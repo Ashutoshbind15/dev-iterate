@@ -9,6 +9,8 @@ import CreateLessonPage from "@/pages/create-lesson";
 import ManageLessonsPage from "@/pages/manage-lessons";
 import LessonsPage from "@/pages/lessons";
 import LessonViewPage from "@/pages/lesson-view";
+import SysLessonsPage from "@/pages/sys-lessons";
+import SysLessonViewPage from "@/pages/sys-lesson-view";
 import AuthedWrapper from "./authed";
 import ProfilePage from "@/pages/profile";
 import CorpusPage from "@/pages/corpus";
@@ -39,6 +41,8 @@ const RouteComp = () => {
         {/* Lessons are public to read */}
         <Route path="/lessons" element={<LessonsPage />} />
         <Route path="/lessons/:id" element={<LessonViewPage />} />
+        <Route path="/sys-lessons" element={<SysLessonsPage />} />
+        <Route path="/sys-lessons/:id" element={<SysLessonViewPage />} />
 
         {/* Coding problems - public to browse */}
         <Route path="/coding" element={<CodingQuestionsPage />} />

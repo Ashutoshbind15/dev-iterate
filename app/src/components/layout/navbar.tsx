@@ -73,6 +73,19 @@ const Navbar = () => {
                       </Link>
                     </NavigationMenuLink>
                   </li>
+                  <li>
+                    <NavigationMenuLink asChild>
+                      <Link
+                        to="/sys-lessons"
+                        data-active={isActive("/sys-lessons")}
+                      >
+                        <span className="font-medium">System lessons</span>
+                        <span className="text-muted-foreground text-xs">
+                          Browse system-generated lessons
+                        </span>
+                      </Link>
+                    </NavigationMenuLink>
+                  </li>
                   <Authenticated>
                     <li>
                       <NavigationMenuLink asChild>

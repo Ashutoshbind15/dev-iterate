@@ -29,6 +29,9 @@ import type * as httpactions_personalizedCodingQuestions from "../httpactions/pe
 import type * as httpactions_personalizedCodingSubmissions from "../httpactions/personalizedCodingSubmissions.js";
 import type * as httpactions_personalizedQuestions from "../httpactions/personalizedQuestions.js";
 import type * as httpactions_summaries from "../httpactions/summaries.js";
+import type * as httpactions_sysLesson from "../httpactions/sysLesson.js";
+import type * as httpactions_sysLessonContent from "../httpactions/sysLessonContent.js";
+import type * as httpactions_sysLessonDiagram from "../httpactions/sysLessonDiagram.js";
 import type * as httpactions_topicResearchSummary from "../httpactions/topicResearchSummary.js";
 import type * as httpactions_topics from "../httpactions/topics.js";
 import type * as httpactions_userWeakness from "../httpactions/userWeakness.js";
@@ -44,6 +47,9 @@ import type * as mutations_personalizedQuestions from "../mutations/personalized
 import type * as mutations_questions from "../mutations/questions.js";
 import type * as mutations_rssSummaries from "../mutations/rssSummaries.js";
 import type * as mutations_seed from "../mutations/seed.js";
+import type * as mutations_sysContents from "../mutations/sysContents.js";
+import type * as mutations_sysDiagrams from "../mutations/sysDiagrams.js";
+import type * as mutations_sysLessons from "../mutations/sysLessons.js";
 import type * as mutations_topicSummaries from "../mutations/topicSummaries.js";
 import type * as mutations_topics from "../mutations/topics.js";
 import type * as mutations_userWeakness from "../mutations/userWeakness.js";
@@ -56,6 +62,7 @@ import type * as queries_personalizedCodingQuestions from "../queries/personaliz
 import type * as queries_personalizedQuestions from "../queries/personalizedQuestions.js";
 import type * as queries_questions from "../queries/questions.js";
 import type * as queries_summaries from "../queries/summaries.js";
+import type * as queries_sysLessons from "../queries/sysLessons.js";
 import type * as queries_user from "../queries/user.js";
 
 import type {
@@ -86,6 +93,9 @@ declare const fullApi: ApiFromModules<{
   "httpactions/personalizedCodingSubmissions": typeof httpactions_personalizedCodingSubmissions;
   "httpactions/personalizedQuestions": typeof httpactions_personalizedQuestions;
   "httpactions/summaries": typeof httpactions_summaries;
+  "httpactions/sysLesson": typeof httpactions_sysLesson;
+  "httpactions/sysLessonContent": typeof httpactions_sysLessonContent;
+  "httpactions/sysLessonDiagram": typeof httpactions_sysLessonDiagram;
   "httpactions/topicResearchSummary": typeof httpactions_topicResearchSummary;
   "httpactions/topics": typeof httpactions_topics;
   "httpactions/userWeakness": typeof httpactions_userWeakness;
@@ -101,6 +111,9 @@ declare const fullApi: ApiFromModules<{
   "mutations/questions": typeof mutations_questions;
   "mutations/rssSummaries": typeof mutations_rssSummaries;
   "mutations/seed": typeof mutations_seed;
+  "mutations/sysContents": typeof mutations_sysContents;
+  "mutations/sysDiagrams": typeof mutations_sysDiagrams;
+  "mutations/sysLessons": typeof mutations_sysLessons;
   "mutations/topicSummaries": typeof mutations_topicSummaries;
   "mutations/topics": typeof mutations_topics;
   "mutations/userWeakness": typeof mutations_userWeakness;
@@ -113,6 +126,7 @@ declare const fullApi: ApiFromModules<{
   "queries/personalizedQuestions": typeof queries_personalizedQuestions;
   "queries/questions": typeof queries_questions;
   "queries/summaries": typeof queries_summaries;
+  "queries/sysLessons": typeof queries_sysLessons;
   "queries/user": typeof queries_user;
 }>;
 

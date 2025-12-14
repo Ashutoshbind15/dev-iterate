@@ -3,6 +3,61 @@ import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 
 export default defineSchema({
+  // ============================================================
+  // SYSTEM-CREATED LESSONS (kept separate from user-created lessons)
+  // ============================================================
+
+  // System-generated rich text content blocks (TipTap JSON)
+  sysContents: defineTable({
+    title: v.string(),
+    content: v.string(), // JSON stringified TipTap content
+    status: v.optional(
+      v.union(v.literal("pending"), v.literal("completed"), v.literal("failed"))
+    ),
+    generationTopic: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+  }),
+
+  // System-generated diagrams (Mermaid syntax)
+  sysDiagrams: defineTable({
+    title: v.string(),
+    mermaid: v.string(),
+    // Cached Excalidraw representation (optional; filled on first render)
+    elements: v.optional(v.string()), // JSON stringified Excalidraw elements
+    appState: v.optional(v.string()), // JSON stringified Excalidraw appState
+    status: v.optional(
+      v.union(v.literal("pending"), v.literal("completed"), v.literal("failed"))
+    ),
+    generationTopic: v.optional(v.string()),
+    errorMessage: v.optional(v.string()),
+  }),
+
+  // System-generated lessons that contain ordered content and diagrams
+  sysLessons: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    tags: v.optional(v.array(v.string())),
+    upvotes: v.optional(v.number()),
+    items: v.optional(
+      v.array(
+        v.object({
+          type: v.union(v.literal("content"), v.literal("diagram")),
+          itemId: v.string(), // ID reference to sysContents or sysDiagrams
+          order: v.number(),
+        })
+      )
+    ),
+  }).index("by_upvotes", ["upvotes"]),
+
+  // System lesson upvotes (one per user)
+  sysLessonVotes: defineTable({
+    lessonId: v.id("sysLessons"),
+    userId: v.id("users"),
+  })
+    .index("by_lessonId", ["lessonId"])
+    .index("by_userId", ["userId"])
+    .index("by_lessonId_and_userId", ["lessonId", "userId"]),
+
   // Rich text content blocks
   contents: defineTable({
     title: v.string(),

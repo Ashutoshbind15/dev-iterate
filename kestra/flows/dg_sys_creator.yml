@@ -1,0 +1,85 @@
+id: dg_sys_creator
+namespace: main
+
+inputs:
+  - id: topic
+    type: STRING
+  - id: lessonId
+    type: STRING
+  - id: order
+    type: INT
+
+tasks:
+  - id: create_pending
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/sys-lesson-diagram/pending"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "topic": "{{ inputs.topic }}",
+        "lessonId": "{{ inputs.lessonId }}",
+        "order": {{ inputs.order }}
+      }
+
+  - id: generate_diagram
+    type: io.kestra.plugin.ai.agent.AIAgent
+    provider:
+      type: io.kestra.plugin.ai.provider.OpenRouter
+      apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
+      modelName: openai/gpt-4.1
+    systemMessage: |
+      You are a technical diagram generator that creates Mermaid flowchart syntax.
+      Given a description of a system, process, or architecture, generate:
+      1. A short, descriptive title (3-6 words)
+      2. A Mermaid flowchart diagram
+
+      Rules for Mermaid syntax:
+      - Use `flowchart LR` for left-to-right flows or `flowchart TD` for top-down flows
+      - Use subgraphs to group related components
+      - IMPORTANT: Mermaid IDs (node ids, subgraph ids) MUST be ASCII [A-Za-z0-9_]+ only (NO emojis or spaces in IDs)
+      - You may include emojis ONLY inside labels, and labels MUST be quoted like: SomeId["Label 📋"]
+      - Use descriptive IDs and labels
+      - Connect nodes with arrows and optional labels for the relationship
+      - Keep the diagram clear and readable
+    configuration:
+      responseFormat:
+        type: JSON
+        jsonSchema:
+          type: object
+          required: ["title", "mermaid"]
+          additionalProperties: false
+          properties:
+            title:
+              type: string
+              description: "A short, descriptive title for the diagram (3-6 words)"
+            mermaid:
+              type: string
+              description: "Valid Mermaid flowchart syntax"
+    prompt: |
+      Generate a Mermaid flowchart diagram for the following topic/description:
+
+      {{ inputs.topic }}
+
+      Create a clear, well-organized diagram that visualizes the key components and their relationships.
+      Use appropriate subgraphs to group related elements and add descriptive labels to connections.
+
+  - id: save_diagram
+    type: io.kestra.plugin.core.http.Request
+    uri: "{{ secret('ACTIONS_BASE_URL') }}/sys-lesson-diagram"
+    method: POST
+    headers:
+      Content-Type: application/json
+    body: |
+      {
+        "diagramId": "{{ outputs.create_pending.body | jq('.diagramId') | first }}",
+        "title": "{{ outputs.generate_diagram['jsonOutput']['title'] }}",
+        "mermaid": {{ outputs.generate_diagram['jsonOutput']['mermaid'] | json }}
+      }
+
+outputs:
+  - id: diagramId
+    type: STRING
+    value: "{{ outputs.create_pending.body | jq('.diagramId') | first }}"
+    description: System diagram id created for this section
