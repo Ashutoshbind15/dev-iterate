@@ -1,3 +1,0 @@
-name: code-exec
-include:
-  - ./code-execution/.judge0/judge0-v1.13.1/docker-compose.yml
