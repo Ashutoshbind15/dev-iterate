@@ -1,46 +1,84 @@
-import { Loader2, CheckCircle2, XCircle, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle2, XCircle, AlertTriangle, Clock } from "lucide-react";
 import type { Submission } from "@/hooks/use-coding-submission";
 
 interface SubmissionStatusProps {
   submission: Submission;
+  compact?: boolean;
 }
 
-export function SubmissionStatus({ submission }: SubmissionStatusProps) {
+export function SubmissionStatus({ submission, compact = false }: SubmissionStatusProps) {
   const { status, passedCount, totalCount, firstFailureIndex, firstFailure } =
     submission;
 
+  if (compact) {
+    return (
+      <div className="flex items-center gap-2">
+        <StatusIcon status={status} size="sm" />
+        <span className="text-sm font-medium text-slate-200">
+          <StatusLabel status={status} />
+        </span>
+        {(status === "passed" || status === "failed") &&
+          passedCount !== undefined &&
+          totalCount !== undefined && (
+            <span className="text-xs text-slate-500">
+              ({passedCount}/{totalCount})
+            </span>
+          )}
+      </div>
+    );
+  }
+
   return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-4 space-y-3">
+    <div className="rounded-lg border border-slate-700/50 bg-slate-900/50 overflow-hidden">
       {/* Status Header */}
-      <div className="flex items-center gap-3">
+      <div className={`px-4 py-3 flex items-center gap-3 ${getStatusHeaderBg(status)}`}>
         <StatusIcon status={status} />
-        <div>
-          <p className="font-semibold text-zinc-900">
+        <div className="flex-1">
+          <p className="font-semibold text-slate-100">
             <StatusLabel status={status} />
           </p>
           {(status === "passed" || status === "failed") &&
             passedCount !== undefined &&
             totalCount !== undefined && (
-              <p className="text-sm text-zinc-500">
-                {passedCount}/{totalCount} test cases passed
-              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="flex-1 h-1.5 bg-slate-700 rounded-full overflow-hidden max-w-[120px]">
+                  <div
+                    className={`h-full rounded-full transition-all ${
+                      status === "passed" ? "bg-emerald-500" : "bg-red-500"
+                    }`}
+                    style={{ width: `${(passedCount / totalCount) * 100}%` }}
+                  />
+                </div>
+                <span className="text-xs text-slate-400">
+                  {passedCount}/{totalCount} passed
+                </span>
+              </div>
             )}
         </div>
+        {submission.durationMs !== undefined &&
+          status !== "queued" &&
+          status !== "running" && (
+            <div className="flex items-center gap-1 text-xs text-slate-400">
+              <Clock className="h-3 w-3" />
+              {(submission.durationMs / 1000).toFixed(2)}s
+            </div>
+          )}
       </div>
 
       {/* Failure Details */}
       {status === "failed" && firstFailure && (
-        <FailureDetails
-          failureIndex={firstFailureIndex}
-          failure={firstFailure}
-        />
+        <div className="border-t border-slate-700/50">
+          <FailureDetails failureIndex={firstFailureIndex} failure={firstFailure} />
+        </div>
       )}
 
       {/* Error Details */}
       {status === "error" && firstFailure?.errorMessage && (
-        <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-          <p className="text-sm font-medium text-red-800 mb-1">System Error</p>
-          <pre className="text-xs text-red-700 whitespace-pre-wrap font-mono">
+        <div className="border-t border-slate-700/50 p-4 bg-red-500/5">
+          <p className="text-xs font-medium text-red-400 mb-2 uppercase tracking-wider">
+            System Error
+          </p>
+          <pre className="text-sm text-red-300 whitespace-pre-wrap font-mono bg-red-500/10 p-3 rounded border border-red-500/20 overflow-x-auto">
             {firstFailure.errorMessage}
           </pre>
         </div>
@@ -48,11 +86,11 @@ export function SubmissionStatus({ submission }: SubmissionStatusProps) {
 
       {/* Compile Output */}
       {submission.compileOutput && (
-        <div className="mt-3 p-3 bg-amber-50 border border-amber-200 rounded-md">
-          <p className="text-sm font-medium text-amber-800 mb-1">
+        <div className="border-t border-slate-700/50 p-4 bg-amber-500/5">
+          <p className="text-xs font-medium text-amber-400 mb-2 uppercase tracking-wider">
             Compile Output
           </p>
-          <pre className="text-xs text-amber-700 whitespace-pre-wrap font-mono overflow-x-auto max-h-40 overflow-y-auto">
+          <pre className="text-sm text-amber-300 whitespace-pre-wrap font-mono bg-amber-500/10 p-3 rounded border border-amber-500/20 overflow-x-auto max-h-40 overflow-y-auto">
             {submission.compileOutput}
           </pre>
         </div>
@@ -60,44 +98,61 @@ export function SubmissionStatus({ submission }: SubmissionStatusProps) {
 
       {/* Stderr (runtime errors) */}
       {submission.stderr && (
-        <div className="mt-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
-          <p className="text-sm font-medium text-orange-800 mb-1">
+        <div className="border-t border-slate-700/50 p-4 bg-orange-500/5">
+          <p className="text-xs font-medium text-orange-400 mb-2 uppercase tracking-wider">
             Runtime Error
           </p>
-          <pre className="text-xs text-orange-700 whitespace-pre-wrap font-mono overflow-x-auto max-h-40 overflow-y-auto">
+          <pre className="text-sm text-orange-300 whitespace-pre-wrap font-mono bg-orange-500/10 p-3 rounded border border-orange-500/20 overflow-x-auto max-h-40 overflow-y-auto">
             {submission.stderr}
           </pre>
         </div>
-      )}
-
-      {/* Duration */}
-      {submission.durationMs !== undefined && status !== "queued" && status !== "running" && (
-        <p className="text-xs text-zinc-400">
-          Completed in {(submission.durationMs / 1000).toFixed(2)}s
-        </p>
       )}
     </div>
   );
 }
 
-function StatusIcon({ status }: { status: Submission["status"] }) {
+function getStatusHeaderBg(status: Submission["status"]): string {
   switch (status) {
     case "queued":
+      return "bg-slate-800/50";
     case "running":
-      return <Loader2 className="h-6 w-6 text-blue-500 animate-spin" />;
+      return "bg-blue-500/10 border-b border-blue-500/20";
     case "passed":
-      return <CheckCircle2 className="h-6 w-6 text-green-500" />;
+      return "bg-emerald-500/10 border-b border-emerald-500/20";
     case "failed":
-      return <XCircle className="h-6 w-6 text-red-500" />;
+      return "bg-red-500/10 border-b border-red-500/20";
     case "error":
-      return <AlertTriangle className="h-6 w-6 text-amber-500" />;
+      return "bg-amber-500/10 border-b border-amber-500/20";
+  }
+}
+
+function StatusIcon({
+  status,
+  size = "md",
+}: {
+  status: Submission["status"];
+  size?: "sm" | "md";
+}) {
+  const sizeClass = size === "sm" ? "h-4 w-4" : "h-5 w-5";
+
+  switch (status) {
+    case "queued":
+      return <Clock className={`${sizeClass} text-slate-400`} />;
+    case "running":
+      return <Loader2 className={`${sizeClass} text-blue-400 animate-spin`} />;
+    case "passed":
+      return <CheckCircle2 className={`${sizeClass} text-emerald-400`} />;
+    case "failed":
+      return <XCircle className={`${sizeClass} text-red-400`} />;
+    case "error":
+      return <AlertTriangle className={`${sizeClass} text-amber-400`} />;
   }
 }
 
 function StatusLabel({ status }: { status: Submission["status"] }) {
   switch (status) {
     case "queued":
-      return "Submission queued...";
+      return "Queued";
     case "running":
       return "Running tests...";
     case "passed":
@@ -116,46 +171,56 @@ interface FailureDetailsProps {
 
 function FailureDetails({ failureIndex, failure }: FailureDetailsProps) {
   return (
-    <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md space-y-3">
-      <p className="text-sm font-medium text-red-800">
-        First failure: Test case #{(failureIndex ?? 0) + 1}
+    <div className="p-4 space-y-4">
+      <p className="text-xs font-medium text-red-400 uppercase tracking-wider">
+        First failure: Test #{(failureIndex ?? 0) + 1}
       </p>
 
       {/* Error message (TLE, runtime error, wrong answer) */}
       {failure.errorMessage && (
         <div>
-          <p className="text-xs font-medium text-red-700 mb-1">Error</p>
-          <pre className="text-xs text-red-600 whitespace-pre-wrap font-mono bg-red-100/50 p-2 rounded">
+          <p className="text-[10px] uppercase tracking-wider font-medium text-slate-500 mb-1.5">
+            Error
+          </p>
+          <pre className="text-sm text-red-300 whitespace-pre-wrap font-mono bg-red-500/10 p-3 rounded border border-red-500/20">
             {failure.errorMessage}
           </pre>
         </div>
       )}
 
-      {/* Input (only shown for public testcases) */}
-      {failure.stdin !== undefined && (
-        <div>
-          <p className="text-xs font-medium text-red-700 mb-1">Input</p>
-          <pre className="text-xs text-zinc-700 whitespace-pre-wrap font-mono bg-white p-2 rounded border border-red-100 max-h-24 overflow-y-auto">
-            {failure.stdin || "(empty)"}
-          </pre>
-        </div>
-      )}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Input (only shown for public testcases) */}
+        {failure.stdin !== undefined && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-medium text-slate-500 mb-1.5">
+              Input
+            </p>
+            <pre className="text-sm text-slate-300 whitespace-pre-wrap font-mono bg-slate-800 p-3 rounded border border-slate-700 max-h-32 overflow-y-auto">
+              {failure.stdin || "(empty)"}
+            </pre>
+          </div>
+        )}
 
-      {/* Expected output (only shown for public testcases) */}
-      {failure.expectedOutput !== undefined && (
-        <div>
-          <p className="text-xs font-medium text-red-700 mb-1">Expected Output</p>
-          <pre className="text-xs text-zinc-700 whitespace-pre-wrap font-mono bg-white p-2 rounded border border-red-100 max-h-24 overflow-y-auto">
-            {failure.expectedOutput || "(empty)"}
-          </pre>
-        </div>
-      )}
+        {/* Expected output (only shown for public testcases) */}
+        {failure.expectedOutput !== undefined && (
+          <div>
+            <p className="text-[10px] uppercase tracking-wider font-medium text-slate-500 mb-1.5">
+              Expected
+            </p>
+            <pre className="text-sm text-emerald-300 whitespace-pre-wrap font-mono bg-emerald-500/10 p-3 rounded border border-emerald-500/20 max-h-32 overflow-y-auto">
+              {failure.expectedOutput || "(empty)"}
+            </pre>
+          </div>
+        )}
+      </div>
 
       {/* Actual output */}
       {failure.actualOutput !== undefined && (
         <div>
-          <p className="text-xs font-medium text-red-700 mb-1">Your Output</p>
-          <pre className="text-xs text-zinc-700 whitespace-pre-wrap font-mono bg-white p-2 rounded border border-red-100 max-h-24 overflow-y-auto">
+          <p className="text-[10px] uppercase tracking-wider font-medium text-slate-500 mb-1.5">
+            Your Output
+          </p>
+          <pre className="text-sm text-red-300 whitespace-pre-wrap font-mono bg-red-500/10 p-3 rounded border border-red-500/20 max-h-32 overflow-y-auto">
             {failure.actualOutput || "(empty)"}
           </pre>
         </div>
@@ -163,5 +228,3 @@ function FailureDetails({ failureIndex, failure }: FailureDetailsProps) {
     </div>
   );
 }
-
-

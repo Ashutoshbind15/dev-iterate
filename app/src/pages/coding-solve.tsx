@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useQuery } from "convex/react";
 import { useParams, Link, useNavigate } from "react-router";
 import { api } from "../../convex/_generated/api";
@@ -11,20 +11,35 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { ArrowLeft, Clock, HardDrive, Play } from "lucide-react";
+import {
+  ArrowLeft,
+  Clock,
+  HardDrive,
+  Send,
+  RotateCcw,
+  Maximize2,
+  Minimize2,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
 import type { Id } from "../../convex/_generated/dataModel";
 import { useCodingSubmission } from "@/hooks/use-coding-submission";
 import { SubmissionStatus } from "@/components/coding/submission-status";
 import { SubmissionHistory } from "@/components/coding/submission-history";
-import { JUDGE0_LANGUAGES, getLanguageName } from "@/components/coding/language-constants";
+import {
+  JUDGE0_LANGUAGES,
+  getLanguageName,
+  getMonacoLanguageId,
+} from "@/components/coding/language-constants";
+import { MonacoCodeEditor } from "@/components/editor/monaco-editor";
 
 export default function CodingSolvePage() {
   const { questionId: questionIdParam } = useParams<{ questionId: string }>();
   const navigate = useNavigate();
   const questionId = questionIdParam as Id<"codingQuestions"> | undefined;
 
-  const [sourceCode, setSourceCode] = useState("");
-  const [languageId, setLanguageId] = useState<number | null>(null);
+  const [isEditorExpanded, setIsEditorExpanded] = useState(false);
+  const [showTestCases, setShowTestCases] = useState(true);
 
   // Fetch question data
   const question = useQuery(
@@ -34,6 +49,10 @@ export default function CodingSolvePage() {
 
   // Current user
   const currentUser = useQuery(api.queries.user.getCurrentUser);
+
+  const [sourceCode, setSourceCode] = useState("");
+  const [languageId, setLanguageId] = useState<number | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   // Submission hook
   const {
@@ -46,27 +65,43 @@ export default function CodingSolvePage() {
     questionId: questionId!,
   });
 
-  // Initialize language and starter code when question loads
-  useEffect(() => {
-    if (question && languageId === null) {
-      setLanguageId(question.defaultLanguageId);
-      // Load starter code if available
-      const starterCode = question.starterCode?.[String(question.defaultLanguageId)];
-      if (starterCode) {
-        setSourceCode(starterCode);
-      }
+  // Initialize language and starter code when question first loads
+  if (question && !initialized) {
+    setLanguageId(question.defaultLanguageId);
+    const starterCode =
+      question.starterCode?.[String(question.defaultLanguageId)];
+    if (starterCode) {
+      setSourceCode(starterCode);
     }
-  }, [question, languageId]);
+    setInitialized(true);
+  }
 
   // Update starter code when language changes
-  useEffect(() => {
-    if (question && languageId !== null && sourceCode === "") {
-      const starterCode = question.starterCode?.[String(languageId)];
-      if (starterCode) {
-        setSourceCode(starterCode);
+  const handleLanguageChange = useCallback(
+    (newLangId: number) => {
+      setLanguageId(newLangId);
+      if (question) {
+        // Only load starter code if current code is empty or is the previous starter code
+        const currentStarterCode =
+          question.starterCode?.[String(languageId)] ?? "";
+        const newStarterCode = question.starterCode?.[String(newLangId)] ?? "";
+
+        if (sourceCode === "" || sourceCode === currentStarterCode) {
+          setSourceCode(newStarterCode);
+        }
       }
+    },
+    [question, languageId, sourceCode]
+  );
+
+  // Reset code to starter
+  const handleResetCode = useCallback(() => {
+    if (question && languageId) {
+      const starterCode = question.starterCode?.[String(languageId)] ?? "";
+      setSourceCode(starterCode);
+      toast.success("Code reset to starter template");
     }
-  }, [languageId, question, sourceCode]);
+  }, [question, languageId]);
 
   const handleSubmit = async () => {
     if (!questionId || languageId === null) return;
@@ -97,19 +132,19 @@ export default function CodingSolvePage() {
   const getDifficultyColor = (difficulty: "easy" | "medium" | "hard") => {
     switch (difficulty) {
       case "easy":
-        return "bg-emerald-100 text-emerald-700";
+        return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30";
       case "medium":
-        return "bg-amber-100 text-amber-700";
+        return "bg-amber-500/20 text-amber-400 border-amber-500/30";
       case "hard":
-        return "bg-rose-100 text-rose-700";
+        return "bg-rose-500/20 text-rose-400 border-rose-500/30";
     }
   };
 
   // Loading state
   if (question === undefined) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center">
-        <div className="text-zinc-500">Loading question...</div>
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="text-slate-400">Loading question...</div>
       </div>
     );
   }
@@ -117,9 +152,9 @@ export default function CodingSolvePage() {
   // Not found
   if (question === null) {
     return (
-      <div className="min-h-screen bg-zinc-50 p-8 flex items-center justify-center">
+      <div className="min-h-screen bg-slate-950 p-8 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-zinc-900 mb-4">
+          <h1 className="text-2xl font-bold text-slate-100 mb-4">
             Question not found
           </h1>
           <Link to="/">
@@ -135,172 +170,253 @@ export default function CodingSolvePage() {
     question.languageIdsAllowed.includes(lang.id)
   );
 
+  const monacoLanguage = languageId
+    ? getMonacoLanguageId(languageId)
+    : "plaintext";
+
   return (
-    <div className="min-h-screen bg-zinc-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-950 via-slate-900 to-zinc-900">
       {/* Header */}
-      <div className="bg-white border-b border-zinc-200">
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => navigate(-1)}
-            className="mb-2 -ml-2"
-          >
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h1 className="text-2xl font-bold text-zinc-900">
-                {question.title}
-              </h1>
-              <div className="flex items-center gap-3 mt-2 text-sm">
-                <span
-                  className={`px-2 py-0.5 rounded font-medium capitalize ${getDifficultyColor(
-                    question.difficulty
-                  )}`}
-                >
-                  {question.difficulty}
-                </span>
-                <span className="flex items-center gap-1 text-zinc-500">
-                  <Clock className="h-3.5 w-3.5" />
-                  {question.timeLimitSeconds}s
-                </span>
-                <span className="flex items-center gap-1 text-zinc-500">
-                  <HardDrive className="h-3.5 w-3.5" />
-                  {question.memoryLimitMb}MB
-                </span>
-                {question.tags.length > 0 && (
-                  <div className="flex gap-1">
-                    {question.tags.map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-1.5 py-0.5 text-xs bg-zinc-100 text-zinc-600 rounded"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
+      <div className="bg-slate-900/80 border-b border-slate-700/50 backdrop-blur-sm sticky top-0 z-20">
+        <div className="max-w-[1800px] mx-auto px-4 py-3">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-3 min-w-0">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => navigate(-1)}
+                className="text-slate-400 hover:text-slate-200 hover:bg-slate-800 shrink-0"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="min-w-0">
+                <h1 className="text-lg font-semibold text-slate-100 truncate">
+                  {question.title}
+                </h1>
+                <div className="flex items-center gap-3 text-xs">
+                  <span
+                    className={`px-2 py-0.5 rounded border font-medium capitalize ${getDifficultyColor(
+                      question.difficulty
+                    )}`}
+                  >
+                    {question.difficulty}
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <Clock className="h-3 w-3" />
+                    {question.timeLimitSeconds}s
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-400">
+                    <HardDrive className="h-3 w-3" />
+                    {question.memoryLimitMb}MB
+                  </span>
+                </div>
               </div>
             </div>
+            {question.tags.length > 0 && (
+              <div className="hidden md:flex gap-1.5 shrink-0">
+                {question.tags.slice(0, 3).map((tag) => (
+                  <span
+                    key={tag}
+                    className="px-2 py-1 text-xs bg-slate-800 text-slate-400 rounded border border-slate-700"
+                  >
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="max-w-[1800px] mx-auto px-4 py-4">
+        <div
+          className={`grid gap-4 ${
+            isEditorExpanded
+              ? "grid-cols-1"
+              : "grid-cols-1 lg:grid-cols-2 xl:grid-cols-5"
+          }`}
+        >
           {/* Left Panel: Problem Statement */}
-          <div className="space-y-6">
-            {/* Problem Description */}
-            <div className="bg-white rounded-lg border border-zinc-200 p-6">
-              <h2 className="text-lg font-semibold text-zinc-900 mb-4">
-                Problem
-              </h2>
-              <div
-                className="prose prose-zinc prose-sm max-w-none"
-                dangerouslySetInnerHTML={{
-                  __html: parseRichText(question.promptRichText),
-                }}
-              />
-            </div>
+          {!isEditorExpanded && (
+            <div className="xl:col-span-2 space-y-4 max-h-[calc(100vh-120px)] overflow-y-auto pr-2">
+              {/* Problem Description */}
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-5">
+                <h2 className="text-sm font-semibold text-slate-200 mb-4">
+                  Problem
+                </h2>
+                <div
+                  className="prose prose-sm prose-invert max-w-none prose-pre:bg-slate-900 prose-pre:border prose-pre:border-slate-700 prose-code:text-emerald-400"
+                  dangerouslySetInnerHTML={{
+                    __html: parseRichText(question.promptRichText),
+                  }}
+                />
+              </div>
 
-            {/* Public Test Cases */}
-            <div className="bg-white rounded-lg border border-zinc-200 p-6">
-              <h2 className="text-lg font-semibold text-zinc-900 mb-4">
-                Examples ({question.publicTestCases.length} of{" "}
-                {question.totalTestCaseCount} test cases shown)
-              </h2>
-              <div className="space-y-4">
-                {question.publicTestCases.map((tc, idx) => (
-                  <div
-                    key={tc._id}
-                    className="p-4 bg-zinc-50 rounded-lg border border-zinc-100"
-                  >
-                    <p className="text-sm font-medium text-zinc-700 mb-2">
-                      {tc.name || `Example ${idx + 1}`}
-                    </p>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <p className="text-xs font-medium text-zinc-500 mb-1">
-                          Input
+              {/* Public Test Cases */}
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50">
+                <button
+                  onClick={() => setShowTestCases(!showTestCases)}
+                  className="w-full px-5 py-4 flex items-center justify-between text-left"
+                >
+                  <h2 className="text-sm font-semibold text-slate-200">
+                    Examples
+                    <span className="ml-2 text-slate-500 font-normal">
+                      ({question.publicTestCases.length} of{" "}
+                      {question.totalTestCaseCount})
+                    </span>
+                  </h2>
+                  {showTestCases ? (
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-slate-400" />
+                  )}
+                </button>
+                {showTestCases && (
+                  <div className="px-5 pb-5 space-y-4">
+                    {question.publicTestCases.map((tc, idx) => (
+                      <div
+                        key={tc._id}
+                        className="p-4 bg-slate-900/50 rounded-lg border border-slate-700/50"
+                      >
+                        <p className="text-xs font-medium text-slate-400 mb-3">
+                          {tc.name || `Example ${idx + 1}`}
                         </p>
-                        <pre className="text-sm text-zinc-800 bg-white p-2 rounded border border-zinc-200 font-mono whitespace-pre-wrap">
-                          {tc.stdin || "(empty)"}
-                        </pre>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider font-medium text-slate-500 mb-1.5">
+                              Input
+                            </p>
+                            <pre className="text-sm text-slate-200 bg-slate-950 p-3 rounded border border-slate-700 font-mono whitespace-pre-wrap overflow-x-auto">
+                              {tc.stdin || "(empty)"}
+                            </pre>
+                          </div>
+                          <div>
+                            <p className="text-[10px] uppercase tracking-wider font-medium text-slate-500 mb-1.5">
+                              Expected
+                            </p>
+                            <pre className="text-sm text-emerald-300 bg-slate-950 p-3 rounded border border-slate-700 font-mono whitespace-pre-wrap overflow-x-auto">
+                              {tc.expectedStdout || "(empty)"}
+                            </pre>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-xs font-medium text-zinc-500 mb-1">
-                          Expected Output
-                        </p>
-                        <pre className="text-sm text-zinc-800 bg-white p-2 rounded border border-zinc-200 font-mono whitespace-pre-wrap">
-                          {tc.expectedStdout || "(empty)"}
-                        </pre>
-                      </div>
-                    </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Right Panel: Code Editor & Submissions */}
-          <div className="space-y-6">
+          <div
+            className={`${
+              isEditorExpanded ? "" : "xl:col-span-3"
+            } space-y-4 max-h-[calc(100vh-120px)] flex flex-col`}
+          >
             {/* Code Editor */}
-            <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden flex-1 flex flex-col min-h-[400px]">
               {/* Editor Header */}
-              <div className="px-4 py-3 border-b border-zinc-200 flex items-center justify-between bg-zinc-50">
-                <Select
-                  value={languageId?.toString()}
-                  onValueChange={(value) => setLanguageId(Number(value))}
-                >
-                  <SelectTrigger className="w-48">
-                    <SelectValue placeholder="Select language">
-                      {languageId !== null && getLanguageName(languageId)}
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {allowedLanguages.map((lang) => (
-                      <SelectItem key={lang.id} value={lang.id.toString()}>
-                        {lang.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  onClick={handleSubmit}
-                  disabled={isSubmitting || !currentUser || languageId === null}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white"
-                >
-                  <Play className="h-4 w-4 mr-1" />
-                  {isSubmitting ? "Submitting..." : "Submit"}
-                </Button>
+              <div className="px-4 py-2.5 border-b border-slate-700/50 flex items-center justify-between bg-slate-900/50">
+                <div className="flex items-center gap-3">
+                  <Select
+                    value={languageId?.toString()}
+                    onValueChange={(value) =>
+                      handleLanguageChange(Number(value))
+                    }
+                  >
+                    <SelectTrigger className="w-44 h-8 text-sm bg-slate-800 border-slate-600 text-slate-200">
+                      <SelectValue placeholder="Select language">
+                        {languageId !== null && getLanguageName(languageId)}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {allowedLanguages.map((lang) => (
+                        <SelectItem key={lang.id} value={lang.id.toString()}>
+                          {lang.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleResetCode}
+                    className="h-8 px-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
+                    title="Reset to starter code"
+                  >
+                    <RotateCcw className="h-4 w-4" />
+                  </Button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditorExpanded(!isEditorExpanded)}
+                    className="h-8 px-2 text-slate-400 hover:text-slate-200 hover:bg-slate-700"
+                  >
+                    {isEditorExpanded ? (
+                      <Minimize2 className="h-4 w-4" />
+                    ) : (
+                      <Maximize2 className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
 
-              {/* Code Textarea (temporary - will be Monaco in Plan 5) */}
-              <textarea
-                value={sourceCode}
-                onChange={(e) => setSourceCode(e.target.value)}
-                placeholder="Write your code here..."
-                className="w-full h-80 p-4 font-mono text-sm text-zinc-800 bg-white border-none resize-none focus:outline-none focus:ring-0"
-                spellCheck={false}
-                disabled={!currentUser}
-              />
+              {/* Monaco Editor */}
+              <div className="flex-1 min-h-[300px]">
+                <MonacoCodeEditor
+                  value={sourceCode}
+                  onChange={(value) => setSourceCode(value)}
+                  language={monacoLanguage}
+                  height="100%"
+                  readOnly={!currentUser}
+                  theme="catppuccin-mocha"
+                  placeholder="// Write your solution here..."
+                />
+              </div>
 
-              {/* Not signed in message */}
-              {!currentUser && (
-                <div className="px-4 py-3 bg-amber-50 border-t border-amber-200 text-sm text-amber-700">
-                  Please sign in to submit code.
+              {/* Editor Footer - Actions */}
+              <div className="px-4 py-3 border-t border-slate-700/50 bg-slate-900/50 flex items-center justify-between">
+                {!currentUser ? (
+                  <p className="text-sm text-amber-400">
+                    Please sign in to submit code
+                  </p>
+                ) : (
+                  <div className="text-xs text-slate-500">
+                    {sourceCode.length} characters
+                  </div>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={
+                      isSubmitting || !currentUser || languageId === null
+                    }
+                    className="bg-emerald-600 hover:bg-emerald-500 text-white"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <div className="h-4 w-4 mr-2 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        Submit
+                      </>
+                    )}
+                  </Button>
                 </div>
-              )}
+              </div>
             </div>
 
             {/* Current Submission Status */}
             {currentSubmission && (
-              <div>
-                <h3 className="text-sm font-medium text-zinc-700 mb-2">
-                  Current Submission
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-4">
+                <h3 className="text-xs font-medium text-slate-400 mb-3 uppercase tracking-wider">
+                  Latest Submission
                 </h3>
                 <SubmissionStatus submission={currentSubmission} />
               </div>
@@ -308,17 +424,19 @@ export default function CodingSolvePage() {
 
             {/* Submission History */}
             {currentUser && (
-              <div className="bg-white rounded-lg border border-zinc-200 overflow-hidden">
-                <div className="px-4 py-3 border-b border-zinc-200 bg-zinc-50">
-                  <h3 className="text-sm font-medium text-zinc-700">
+              <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+                <div className="px-4 py-3 border-b border-slate-700/50 bg-slate-900/50">
+                  <h3 className="text-xs font-medium text-slate-400 uppercase tracking-wider">
                     Your Submissions
                   </h3>
                 </div>
-                <SubmissionHistory
-                  questionId={questionId!}
-                  onSelectSubmission={handleSelectHistoricalSubmission}
-                  selectedSubmissionId={trackedSubmissionId}
-                />
+                <div className="max-h-48 overflow-y-auto">
+                  <SubmissionHistory
+                    questionId={questionId!}
+                    onSelectSubmission={handleSelectHistoricalSubmission}
+                    selectedSubmissionId={trackedSubmissionId}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -342,7 +460,15 @@ function parseRichText(jsonString: string): string {
   }
 }
 
-function renderNode(node: { type?: string; content?: unknown[]; text?: string; marks?: { type: string }[] }): string {
+interface RichTextNode {
+  type?: string;
+  content?: RichTextNode[];
+  text?: string;
+  marks?: { type: string }[];
+  attrs?: { level?: number };
+}
+
+function renderNode(node: RichTextNode): string {
   if (!node.type) return "";
 
   switch (node.type) {
@@ -368,13 +494,19 @@ function renderNode(node: { type?: string; content?: unknown[]; text?: string; m
     case "listItem":
       return `<li>${node.content?.map(renderNode).join("") ?? ""}</li>`;
     case "codeBlock":
-      return `<pre><code>${node.content?.map(renderNode).join("") ?? ""}</code></pre>`;
+      return `<pre><code>${
+        node.content?.map(renderNode).join("") ?? ""
+      }</code></pre>`;
     case "heading": {
-      const level = (node as { attrs?: { level?: number } }).attrs?.level ?? 1;
-      return `<h${level}>${node.content?.map(renderNode).join("") ?? ""}</h${level}>`;
+      const level = node.attrs?.level ?? 1;
+      return `<h${level}>${
+        node.content?.map(renderNode).join("") ?? ""
+      }</h${level}>`;
     }
     case "blockquote":
-      return `<blockquote>${node.content?.map(renderNode).join("") ?? ""}</blockquote>`;
+      return `<blockquote>${
+        node.content?.map(renderNode).join("") ?? ""
+      }</blockquote>`;
     case "hardBreak":
       return "<br />";
     default:
@@ -390,5 +522,3 @@ function escapeHtml(str: string): string {
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
 }
-
-

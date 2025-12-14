@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Code2, ChevronRight, Filter, Loader2 } from "lucide-react";
+import { Code2, ChevronRight, Filter, Loader2, Plus } from "lucide-react";
 
 type Difficulty = "easy" | "medium" | "hard";
 
@@ -22,9 +22,10 @@ export default function CodingQuestionsPage() {
 
   const result = useQuery(api.queries.codingQuestions.listCodingQuestions, {
     paginationOpts: { numItems: 50, cursor: null },
-    difficulty:
-      difficultyFilter === "all" ? undefined : difficultyFilter,
+    difficulty: difficultyFilter === "all" ? undefined : difficultyFilter,
   });
+
+  const currentUser = useQuery(api.queries.user.getCurrentUser);
 
   const getDifficultyColor = (difficulty: Difficulty) => {
     switch (difficulty) {
@@ -54,6 +55,16 @@ export default function CodingQuestionsPage() {
             Practice your programming skills with algorithmic challenges
           </p>
         </div>
+        {currentUser && (
+          <div className="max-w-5xl mx-auto px-4 pb-4">
+            <Link to="/coding/create">
+              <Button className="bg-emerald-600 hover:bg-emerald-500 text-white">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Problem
+              </Button>
+            </Link>
+          </div>
+        )}
       </div>
 
       {/* Content */}

@@ -42,4 +42,11 @@ export function getLanguageName(id: number): string {
   return getLanguageById(id)?.name ?? `Language ${id}`;
 }
 
+/**
+ * Get Monaco editor language ID by Judge0 language ID
+ */
+export function getMonacoLanguageId(judge0Id: number): string {
+  return getLanguageById(judge0Id)?.monacoId ?? "plaintext";
+}
+
 

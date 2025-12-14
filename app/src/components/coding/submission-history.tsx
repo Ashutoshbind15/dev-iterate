@@ -1,7 +1,14 @@
 import { useQuery } from "convex/react";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
-import { CheckCircle2, XCircle, AlertTriangle, Clock, Loader2 } from "lucide-react";
+import {
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  Clock,
+  Loader2,
+  Code,
+} from "lucide-react";
 import { JUDGE0_LANGUAGES } from "./language-constants";
 
 interface SubmissionHistoryProps {
@@ -28,15 +35,18 @@ export function SubmissionHistory({
   onSelectSubmission,
   selectedSubmissionId,
 }: SubmissionHistoryProps) {
-  const result = useQuery(api.queries.codingSubmissions.listMyCodingSubmissions, {
-    questionId,
-  });
+  const result = useQuery(
+    api.queries.codingSubmissions.listMyCodingSubmissions,
+    {
+      questionId,
+    }
+  );
 
   if (result === undefined) {
     return (
-      <div className="p-4 text-center text-zinc-500">
-        <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
-        Loading submissions...
+      <div className="px-4 py-8 text-center">
+        <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2 text-slate-500" />
+        <p className="text-sm text-slate-500">Loading submissions...</p>
       </div>
     );
   }
@@ -45,14 +55,17 @@ export function SubmissionHistory({
 
   if (submissions.length === 0) {
     return (
-      <div className="p-4 text-center text-zinc-500 text-sm">
-        No submissions yet. Write some code and submit!
+      <div className="px-4 py-8 text-center">
+        <Code className="h-8 w-8 mx-auto mb-2 text-slate-600" />
+        <p className="text-sm text-slate-500">
+          No submissions yet. Write some code and submit!
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="divide-y divide-zinc-100">
+    <div className="divide-y divide-slate-700/50">
       {submissions.map((submission) => (
         <SubmissionRow
           key={submission._id}
@@ -77,27 +90,43 @@ function SubmissionRow({ submission, isSelected, onClick }: SubmissionRowProps) 
   return (
     <button
       onClick={onClick}
-      className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-zinc-50 ${
-        isSelected ? "bg-zinc-100" : ""
+      className={`w-full px-4 py-3 flex items-center gap-3 text-left transition-colors hover:bg-slate-700/30 ${
+        isSelected ? "bg-slate-700/50" : ""
       }`}
     >
       <StatusIcon status={submission.status} />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-zinc-900">
+          <span className="text-sm font-medium text-slate-200">
             {language?.name ?? `Language ${submission.languageId}`}
           </span>
           <StatusBadge status={submission.status} />
         </div>
-        <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
+        <div className="flex items-center gap-2 text-xs text-slate-500 mt-0.5">
           <span>{formatTimestamp(submission._creationTime)}</span>
           {submission.passedCount !== undefined &&
             submission.totalCount !== undefined && (
               <>
-                <span>·</span>
-                <span>
-                  {submission.passedCount}/{submission.totalCount} passed
+                <span className="text-slate-600">·</span>
+                <span
+                  className={
+                    submission.status === "passed"
+                      ? "text-emerald-400"
+                      : submission.status === "failed"
+                      ? "text-red-400"
+                      : ""
+                  }
+                >
+                  {submission.passedCount}/{submission.totalCount}
                 </span>
+              </>
+            )}
+          {submission.durationMs !== undefined &&
+            submission.status !== "queued" &&
+            submission.status !== "running" && (
+              <>
+                <span className="text-slate-600">·</span>
+                <span>{(submission.durationMs / 1000).toFixed(1)}s</span>
               </>
             )}
         </div>
@@ -109,25 +138,27 @@ function SubmissionRow({ submission, isSelected, onClick }: SubmissionRowProps) 
 function StatusIcon({ status }: { status: SubmissionStatus }) {
   switch (status) {
     case "queued":
-      return <Clock className="h-4 w-4 text-zinc-400 flex-shrink-0" />;
+      return <Clock className="h-4 w-4 text-slate-400 flex-shrink-0" />;
     case "running":
-      return <Loader2 className="h-4 w-4 text-blue-500 animate-spin flex-shrink-0" />;
+      return (
+        <Loader2 className="h-4 w-4 text-blue-400 animate-spin flex-shrink-0" />
+      );
     case "passed":
-      return <CheckCircle2 className="h-4 w-4 text-green-500 flex-shrink-0" />;
+      return <CheckCircle2 className="h-4 w-4 text-emerald-400 flex-shrink-0" />;
     case "failed":
-      return <XCircle className="h-4 w-4 text-red-500 flex-shrink-0" />;
+      return <XCircle className="h-4 w-4 text-red-400 flex-shrink-0" />;
     case "error":
-      return <AlertTriangle className="h-4 w-4 text-amber-500 flex-shrink-0" />;
+      return <AlertTriangle className="h-4 w-4 text-amber-400 flex-shrink-0" />;
   }
 }
 
 function StatusBadge({ status }: { status: SubmissionStatus }) {
   const styles: Record<SubmissionStatus, string> = {
-    queued: "bg-zinc-100 text-zinc-600",
-    running: "bg-blue-100 text-blue-700",
-    passed: "bg-green-100 text-green-700",
-    failed: "bg-red-100 text-red-700",
-    error: "bg-amber-100 text-amber-700",
+    queued: "bg-slate-700 text-slate-300 border-slate-600",
+    running: "bg-blue-500/20 text-blue-300 border-blue-500/30",
+    passed: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+    failed: "bg-red-500/20 text-red-300 border-red-500/30",
+    error: "bg-amber-500/20 text-amber-300 border-amber-500/30",
   };
 
   const labels: Record<SubmissionStatus, string> = {
@@ -140,7 +171,7 @@ function StatusBadge({ status }: { status: SubmissionStatus }) {
 
   return (
     <span
-      className={`px-1.5 py-0.5 text-xs font-medium rounded ${styles[status]}`}
+      className={`px-1.5 py-0.5 text-[10px] font-medium rounded border ${styles[status]}`}
     >
       {labels[status]}
     </span>
@@ -162,5 +193,3 @@ function formatTimestamp(timestamp: number): string {
 
   return date.toLocaleDateString();
 }
-
-
