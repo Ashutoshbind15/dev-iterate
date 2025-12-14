@@ -3,14 +3,38 @@
 Dev-Iterate is an **AI-powered learning platform** that continuously generates fresh lessons (rich text + diagrams), delivers **coding challenges with real-time judging**, and adapts the learning path using **decision-making AI workflows**.
 
 At its core, this repo is a **Convex ↔ Kestra** system:
+
 - **Convex** is the realtime database + API that powers the product UI.
 - **Kestra** is the orchestration brain for long-running pipelines: multi-agent research, summarization, lesson generation, RAG indexing, and personalization.
+
+---
+
+### Architecture diagrams (quick map)
+
+These diagrams are the fastest way to understand the system end-to-end:
+
+- **App + platform architecture** (`architecture-diagrams/app-arch.png`)
+
+![App + platform architecture](architecture-diagrams/app-arch.png)
+
+- **Summary generation + indexing** (`architecture-diagrams/summary-gen.png`)
+
+![Summary generation + indexing](architecture-diagrams/summary-gen.png)
+
+- **System lesson generation** (`architecture-diagrams/sys-lesson-gen.png`)
+
+![System lesson generation](architecture-diagrams/sys-lesson-gen.png)
+
+- **Personalized question generation (decisioning + branching)** (`architecture-diagrams/personalised-question-gen.png`)
+
+![Personalized question generation](architecture-diagrams/personalised-question-gen.png)
 
 ---
 
 ### What it does (from the home page)
 
 The landing experience (“AI-Powered Learning Platform”) highlights four pillars:
+
 - **AI lessons**: lessons + diagrams generated automatically from trending topics.
 - **Coding challenges**: solve problems with **real-time code execution** and instant feedback.
 - **Question corpus**: community quiz questions (MCQ + descriptive).
@@ -37,6 +61,8 @@ It also calls out the “Behind the Scenes” pipeline: **Web Research**, **RAG 
   - **Postgres** for Kestra’s internal repository/queue/storage metadata.
   - **Self-hosted Judge0** for compiling/running code at scale.
 
+For the full big-picture dataflow, see **`architecture-diagrams/app-arch.png`**.
+
 #### Convex → Kestra (triggering flows)
 
 When we need orchestration (AI-heavy, slow, or multi-step), Convex triggers Kestra using a **Convex action** (often an `internalAction`). The standard webhook trigger pattern is:
@@ -48,6 +74,7 @@ Content-Type: application/json
 ```
 
 In practice:
+
 - Convex actions in `app/convex/actionsdir/*` build the webhook request, attach Basic Auth, and send a JSON payload.
 - Triggers are often used as fire-and-forget, so the UI stays fast and Convex keeps doing what it’s best at: validation + persistence + realtime updates.
 
@@ -56,6 +83,7 @@ In practice:
 After processing, Kestra flows POST results back to **Convex HTTP endpoints** (see `app/convex/http.ts`). Convex stores the results; clients see updates instantly via Convex realtime subscriptions.
 
 Key callback endpoints include:
+
 - **Lessons pipeline**: `/sys-lesson`, `/sys-lesson-content/pending`, `/sys-lesson-content`, `/sys-lesson-diagram/pending`, `/sys-lesson-diagram`
 - **Topic research**: `/topics`, `/topic-research-summary`
 - **RSS summaries**: `/feed`
@@ -66,6 +94,7 @@ Key callback endpoints include:
 #### Code execution + Judge0
 
 `code-execution/` exposes a queue-style API (`POST /v1/judge-question`) that:
+
 1. Marks a submission as “running” in Convex (HTTP action).
 2. Fetches **public + hidden testcases** from Convex (HTTP action).
 3. Executes code via **Judge0** (self-hosted).
@@ -73,20 +102,26 @@ Key callback endpoints include:
 
 This keeps the core product responsive while handling compilation/runtime work off the main app path.
 
+This path is also captured in **`architecture-diagrams/app-arch.png`**.
+
 ---
 
 ### Kestra, in depth (flows, subflows, agents, and decision-making)
 
 Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are intentionally modular: **webhooks start work**, **subflows compose behaviors**, **AI agents make structured decisions**, and Convex acts as the source-of-truth system.
 
+> Note: the workflows called out below are **not exhaustive**—they’re the core ones that benefit most from explanation. See `kestra/flows/` for the full set.
+
 #### Content discovery + research fan-out
 
 - **`topicsextractor.yml`**
+
   - Pulls trending titles from Hacker News (Node task in a Docker runner).
   - Uses an **AIAgent** to propose **2–4 high-level topics** as valid JSON.
   - Sends topics to Convex via `POST {{ACTIONS_BASE_URL}}/topics`.
 
 - **`topicsiterator.yml`**
+
   - Webhook-triggered fan-out controller.
   - `ForEach` over `{ topic, topicId }` pairs.
   - Runs two subflows per topic:
@@ -94,6 +129,7 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
     - `topic_rag_summarizer` (knowledge-base retrieval)
 
 - **`webresearch.yml` (flow id: `websearch_summarizer`)**
+
   - A multi-tool **AIAgent** that uses:
     - `TavilyWebSearch` to fetch sources
     - a nested “writer” agent to produce a concise summary
@@ -105,9 +141,12 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
     - OpenRouter embedding model (`qwen/qwen3-embedding-4b`)
   - Then summarizes with an AIAgent and POSTs back to `POST /topic-research-summary` (kind: `rag`).
 
+This end-to-end “summary generation” pipeline is visualized in **`architecture-diagrams/summary-gen.png`**.
+
 #### RSS ingestion + summarization
 
 - **`rss_summarizer.yml`**
+
   - Iterates over a KV-configured list of RSS URLs and calls a subflow per feed.
 
 - **`rss_single_summarizer.yml`**
@@ -118,11 +157,13 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
 #### Daily lesson planning → lesson creation (fan-in + structured generation)
 
 - **`main_summarizer.yml`**
+
   - Fetches recent summaries from Convex (`GET /summaries`) across multiple sources (RSS + research + RAG).
   - Uses an AIAgent to generate **3–5 lesson titles + descriptions** (strict JSON schema).
   - Starts `create_lessons` as a subflow for actual lesson creation.
 
 - **`create_lessons.yml`**
+
   - `ForEach` over generated lessons:
     1. Creates a system lesson record in Convex via `POST /sys-lesson`
     2. Runs a “creator” **AIAgent** with **tools** that call Kestra subflows:
@@ -131,6 +172,7 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
   - The agent is constrained (3–5 sections total, ≤5 tool calls, at least 1 diagram), which makes the pipeline repeatable and debuggable.
 
 - **`rte_sys_creator.yml`**
+
   - Creates a “pending” content section in Convex (`POST /sys-lesson-content/pending`)
   - Generates TipTap/ProseMirror JSON (rich content) with a strict schema
   - Saves the content to Convex (`POST /sys-lesson-content`)
@@ -140,9 +182,12 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
   - Generates Mermaid syntax + title (strict JSON)
   - Saves the diagram to Convex (`POST /sys-lesson-diagram`)
 
+This full “system lesson generation” pipeline is visualized in **`architecture-diagrams/sys-lesson-gen.png`**.
+
 #### Indexing into the knowledge base (RAG ingestion)
 
 - **`content_submission_indexer.yml`**
+
   - Webhook entrypoint for indexing submitted content (expects a stringified TipTap JSON doc).
   - Delegates to `jsontomdindex`.
 
@@ -154,6 +199,7 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
 #### Personalization & decision logic (branching by learner profile)
 
 - **`personalized_question_generator.yml`**
+
   - Evaluates learner analysis → produces:
     - **novelty score (1–10)**
     - **learner category** (`advanced` / `needs_support` / `general`)
@@ -161,6 +207,7 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
   - Posts generated questions to Convex via `POST /personalized-questions`.
 
 - **`personalized_coding_question_generator.yml`**
+
   - Similar branching logic, but produces **coding problems** that include:
     - TipTap rich prompt
     - difficulty/tags
@@ -171,6 +218,8 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
 - **`user_weakness_analyzer.yml`** and **`coding_user_weakness_analyzer.yml`**
   - Generate short, actionable “coach remarks” from recent performance batches.
   - Post back to Convex (`/user-weakness` and `/coding-user-weakness`) so the UI can show progress guidance.
+
+The “novelty score → branching → agent selection” concept is captured in **`architecture-diagrams/personalised-question-gen.png`**.
 
 #### On-demand diagram generation
 
@@ -183,6 +232,7 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
 ### Directory structure (repo tour)
 
 - **`app/`**: the product app
+
   - **`app/src/`**: React UI (routes/pages, editor UI, coding UI, lesson views)
   - **`app/convex/`**: Convex backend (realtime DB + API)
     - **`actionsdir/`**: outbound integrations (trigger Kestra flows, diagram generation, etc.)
@@ -191,18 +241,22 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
     - **`schema.ts`**: Convex data model
 
 - **`kestra/`**
+
   - **`kestra/flows/`**: orchestration workflows (AI agents, subflows, research, RAG, lesson generation, personalization)
 
 - **`code-execution/`**
+
   - Node/Express service that integrates with Judge0 and Convex:
     - fetches testcases from Convex endpoints
     - executes against Judge0
     - posts results back to Convex endpoints
 
 - **`automation-scripts/`**
+
   - Utility scripts used by Kestra flows (RSS parsing, TipTap JSON → Markdown conversion for indexing).
 
 - **`docker-compose.yml`**
+
   - Local Kestra + Postgres stack (Kestra server runs with a mounted Docker socket for task runners).
 
 - **`plans/`**
@@ -215,13 +269,16 @@ Kestra is the “control plane” for Dev-Iterate’s AI system. The flows are i
 Prereqs: **Node 18+**, **pnpm**, and **Docker**.
 
 - **Install workspace deps**
+
   - `pnpm -w install`
 
 - **Kestra**
+
   - Start: `docker compose up -d`
   - Flows live in `kestra/flows/*.yml` and are typically triggered via Convex actions → webhook executions.
 
 - **App (UI)**
+
   - `pnpm --filter app dev`
 
 - **Code execution service**
@@ -234,6 +291,7 @@ Prereqs: **Node 18+**, **pnpm**, and **Docker**.
 ### Notes on configuration (what the flows expect)
 
 Common knobs referenced across flows:
+
 - **`ACTIONS_BASE_URL`** (Kestra secret): base URL for Convex HTTP endpoints (Kestra → Convex callbacks).
 - **`WEBHOOK_TRIGGER_KEY`**: Kestra webhook trigger key (Convex → Kestra).
 - **`KESTRA_BASIC_AUTH_ENCODED`**: Basic auth header value (Convex → Kestra, and some synchronous executions).
@@ -249,5 +307,3 @@ Common knobs referenced across flows:
 - **Convex endpoints used for callbacks**: `app/convex/http.ts`
 - **Convex → Kestra triggers**: `app/convex/actionsdir/`
 - **Judge integration**: `code-execution/` and Convex endpoints under `/coding/*`
-
-
