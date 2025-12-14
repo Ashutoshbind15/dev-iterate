@@ -10,12 +10,6 @@ tasks:
     type: io.kestra.plugin.core.flow.ForEach
     values: '{{inputs.lessonsgen | jq(".[]")}}'
     tasks:
-      - id: log
-        type: io.kestra.plugin.core.log.Log
-        message:
-          - title is - {{taskrun.value | jq('.title') | first }}
-          - description is - {{taskrun.value | jq('.description') | first }}
-
       - id: create_sys_lesson
         type: io.kestra.plugin.core.http.Request
         uri: "{{ secret('ACTIONS_BASE_URL') }}/sys-lesson"
@@ -56,9 +50,9 @@ tasks:
           - type: io.kestra.plugin.ai.tool.KestraFlow
             flowId: rte_sys_creator
             namespace: main
-            description: Create a system lesson rich-text section. Call with JSON: {"topic": string, "lessonId": string, "order": int}
+            description: A system lesson rich-text section generator. Call with topic string, lessonId as string, and order as a number
 
           - type: io.kestra.plugin.ai.tool.KestraFlow
             flowId: dg_sys_creator
             namespace: main
-            description: Create a system lesson diagram section (Mermaid). Call with JSON: {"topic": string, "lessonId": string, "order": int}
+            description: A system lesson diagram section generator. Call with topic as string, lessonId as string, and order as a number

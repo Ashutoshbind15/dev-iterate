@@ -28,7 +28,7 @@ tasks:
     provider:
       type: io.kestra.plugin.ai.provider.OpenRouter
       apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
-      modelName: openai/gpt-4.1
+      modelName: openai/gpt-5.1
     systemMessage: |
       You are a technical diagram generator that creates Mermaid flowchart syntax.
       Given a description of a system, process, or architecture, generate:
@@ -37,10 +37,9 @@ tasks:
 
       Rules for Mermaid syntax:
       - Use `flowchart LR` for left-to-right flows or `flowchart TD` for top-down flows
-      - Use subgraphs to group related components
-      - IMPORTANT: Mermaid IDs (node ids, subgraph ids) MUST be ASCII [A-Za-z0-9_]+ only (NO emojis or spaces in IDs)
-      - You may include emojis ONLY inside labels, and labels MUST be quoted like: SomeId["Label 📋"]
-      - Use descriptive IDs and labels
+      - Use subgraphs to group related components with descriptive names
+      - Add emojis to subgraph names for visual clarity (📱, 🖥️, ☁️, ⚙️, 📋, etc.)
+      - Use descriptive node IDs and labels
       - Connect nodes with arrows and optional labels for the relationship
       - Keep the diagram clear and readable
     configuration:

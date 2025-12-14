@@ -271,5 +271,3 @@ outputs:
     type: STRING
     value: "{{ outputs.create_pending.body | jq('.contentId') | first }}"
     description: System content id created for this section
-
-

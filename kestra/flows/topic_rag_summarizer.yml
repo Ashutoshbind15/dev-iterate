@@ -9,7 +9,7 @@ inputs:
     type: STRING
 
 variables:
-  chatModel: "moonshotai/kimi-k2-0905"
+  chatModel: "google/gemini-2.5-flash"
   embeddingModel: "qwen/qwen3-embedding-4b"
 
 tasks:
@@ -75,5 +75,3 @@ tasks:
         "kind": "rag",
         "summary": "{{ outputs.summarize['jsonOutput']['summary'] }}"
       }
-
-

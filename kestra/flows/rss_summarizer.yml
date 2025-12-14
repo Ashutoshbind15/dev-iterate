@@ -12,9 +12,4 @@ tasks:
         flowId: rss_single_summarizer
         namespace: main
         inputs:
-          feedUrl: "{{ taskrun.value | trim }}"
-
-triggers:
-  - id: webhook
-    type: io.kestra.plugin.core.trigger.Webhook
-    key: "{{ secret('WEBHOOK_TRIGGER_KEY') }}"
+          feedUrl: "{{ taskrun.value }}"

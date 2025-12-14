@@ -24,7 +24,7 @@ tasks:
     provider:
       type: io.kestra.plugin.ai.provider.OpenRouter
       apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
-      modelName: "anthropic/claude-sonnet-4.5"
+      modelName: "openai/gpt-5.1"
     systemMessage: |
       You are an expert curriculum designer who creates engaging lesson titles and descriptions.
       Given a collection of summaries from various sources (RSS feeds, web research, RAG knowledge base),
@@ -69,6 +69,11 @@ tasks:
       1. Cover the most important/trending topics from the summaries
       2. Have clear learning outcomes
       3. Are distinct from each other (don't overlap too much)
+
+  - id: outputResults
+    type: io.kestra.plugin.core.debug.Return
+    format: |
+      {{ outputs.generateLessonTitles["jsonOutput"] }}
 
   - id: createLessons
     type: io.kestra.plugin.core.flow.Subflow

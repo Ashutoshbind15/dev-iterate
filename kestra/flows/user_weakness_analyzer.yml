@@ -11,8 +11,9 @@ tasks:
     containerImage: node:slim
     script: |
       const Kestra = require("@kestra-io/libs");
+      const logger = Kestra.logger();
 
-      const rawJsonString = `{{ trigger.body }}`
+      const rawJsonString = JSON.stringify({{ trigger.body }})
 
       const parsed = JSON.parse(rawJsonString)
       const qids = []

@@ -30,10 +30,10 @@ tasks:
         provider:
           type: io.kestra.plugin.ai.provider.OpenRouter
           apiKey: "{{ secret('OPENROUTER_API_KEY') }}"
-          modelName: "anthropic/claude-haiku-4.5"
+          modelName: "openai/gpt-5.1"
         systemMessage: |
           You summarize RSS/Atom feed items into a concise, high-signal summary.
-          Return ONLY valid JSON matching the schema.
+          Return ONLY valid JSON matching the schema. avoid #s
         configuration:
           responseFormat:
             type: JSON

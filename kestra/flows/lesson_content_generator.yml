@@ -30,7 +30,7 @@ tasks:
       - Lists contain listItem nodes, which contain paragraph nodes
       - Empty paragraphs have no content array
       - Code blocks must have a language attribute
-      - The returned json output should be of the following format strictly: {"type": "doc", "content": [...content nodes]}
+      - The returned json output should be {type: doc, content: []}, strictly
 
       Example for a JS tutoial:
 
